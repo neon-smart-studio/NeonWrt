@@ -42,7 +42,6 @@ define Package/base-files
   DEPENDS:= \
 	+netifd +libc +jsonfilter +SIGNED_PACKAGES:usign +SIGNED_PACKAGES:openwrt-keyring \
 	+NAND_SUPPORT:ubi-utils +fstools +fwtool \
-	+SELINUX:procd-selinux +!SELINUX:procd +USE_SECCOMP:procd-seccomp \
 	+SELINUX:busybox-selinux +!SELINUX:busybox
   TITLE:=Base filesystem for OpenWrt
   URL:=http://openwrt.org/
@@ -219,13 +218,6 @@ define Package/base-files/install
 	$(if $(LIB_SUFFIX),-$(LN) lib $(1)/lib$(LIB_SUFFIX))
 	$(if $(LIB_SUFFIX),-$(LN) lib $(1)/usr/lib$(LIB_SUFFIX))
 
-ifneq ($(CONFIG_TARGET_ROOTFS_PERSIST_VAR),y)
-	rm -f $(1)/var
-	$(LN) tmp $(1)/var
-else
-	mkdir -p $(1)/var
-	$(LN) /tmp/run $(1)/var/run
-endif
 	$(LN) /tmp/resolv.conf /tmp/TZ /tmp/localtime $(1)/etc/
 
 	chmod 0600 $(1)/etc/shadow

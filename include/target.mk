@@ -34,6 +34,12 @@ DEFAULT_PACKAGES:=\
 	urandom-seed \
 	urngd
 
+ifneq ($(CONFIG_SELINUX),)
+DEFAULT_PACKAGES+=busybox-selinux systemd systemd-executor systemd-tmpfiles
+else
+DEFAULT_PACKAGES+=busybox systemd systemd-executor systemd-tmpfiles
+endif
+
 ##@
 # @brief Default packages for @DEVICE_TYPE basic.
 ##
@@ -92,7 +98,6 @@ endif
 
 # include ujail on systems with enough storage
 ifeq ($(filter small_flash,$(FEATURES)),)
-  DEFAULT_PACKAGES+=procd-ujail
 endif
 
 # Add device specific packages (here below to allow device type set from subtarget)
