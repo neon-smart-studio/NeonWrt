@@ -1,0 +1,13 @@
+diff --git a/parser/capability.h b/parser/capability.h
+index abcdef1..1234567 100644
+--- a/parser/capability.h
++++ b/parser/capability.h
+@@ -32,6 +32,8 @@
+ #ifndef CAP_CHECKPOINT_RESTORE
+ #define CAP_CHECKPOINT_RESTORE 40
+ #endif
+ 
++#include <cstdint>
++ 
+ typedef enum capability_flags {
+ 	CAPFLAGS_CLEAR = 0,

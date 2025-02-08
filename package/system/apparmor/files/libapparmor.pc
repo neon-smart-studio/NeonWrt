@@ -1,0 +1,10 @@
+prefix=/usr
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: libapparmor
+Description: AppArmor library
+Version: 3.0.3
+Libs: -L${libdir} -lapparmor
+Cflags: -I${includedir}/apparmor
