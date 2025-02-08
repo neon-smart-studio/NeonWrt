@@ -1,1 +1,4 @@
 # <file system> <mount point> <type> <options> <dump> <pass>
+/dev/mmcblk0p2 / ext4 defaults,noatime 0 1
+devtmpfs /dev devtmpfs defaults 0 0
+
