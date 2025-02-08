@@ -43,6 +43,24 @@ unicode support, an optional integrated sandboxed execution
 environment, widely used and BSD licensed.
 endef
 
+define Host/Compile
+	$(call HostPython3/Run, \
+		$(HOST_BUILD_DIR), \
+		-m pip install --no-cache-dir --prefix="$(STAGING_DIR_HOSTPKG)" Jinja2==$(PKG_VERSION))
+endef
+
+define Host/Install
+	$(INSTALL_DIR) $(STAGING_DIR_HOSTPKG)/lib/python$(PYTHON3_VERSION)/site-packages
+endef
+
+define Host/Package/python3-jinja2
+  SECTION:=host
+  CATEGORY:=Languages
+  TITLE:=Very fast and expressive template engine (host)
+  URL:=https://palletsprojects.com/p/jinja/
+endef
+
+
 $(eval $(call Py3Package,python3-jinja2))
 $(eval $(call BuildPackage,python3-jinja2))
 $(eval $(call BuildPackage,python3-jinja2-src))
