@@ -18,8 +18,6 @@ PKG_LICENSE:=MIT/X11
 PKG_LICENSE_FILES:=LICENSE
 PKG_CPE_ID_VENDOR:=xkbcommon
 
-PKG_BUILD_DEPENDS:=host-bison host-flex
-
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/meson.mk
 

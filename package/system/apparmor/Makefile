@@ -15,7 +15,7 @@ PKG_LICENSE:=GPL-2.0-only
 PKG_LICENSE_FILES:=LICENSE
 PKG_MAINTAINER:=Oskari Rauta <oskari.rauta@gmail.com>
 
-PKG_BUILD_DEPENDS:=swig/host python3/host python3-setuptools/host python3-dev/host
+PKG_BUILD_DEPENDS:=swig/host python3/host
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/nls.mk
