@@ -15,7 +15,16 @@ PKG_BUILD_DEPENDS:=intltool/host gperf/host python-jinja2/host python-pyelftools
 PKG_BUILD_PARALLEL:=1
 PKG_INSTALL:=1
 
-include systemd-common.mk
+SYSTEMD_UDEVD_SYSTEM_SERVICES = \
+	initrd-udevadm-cleanup-db.service \
+	systemd-hwdb-update.service \
+	systemd-udev-settle.service \
+	systemd-udev-trigger.service
+
+SYSTEMD_UDEVD_SYSTEM_SOCKETS = \
+	systemd-udevd-control.socket \
+	systemd-udevd-kernel.socket
+
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/meson.mk
 
@@ -73,19 +82,7 @@ CONFIGURE_ARGS += \
 	--enable-libcurl \
 	--enable-switch-root \
 	--enable-sulogin \
-#	$(call SYSTEMD_DISABLE_PKG,bootchart,bootchart) \
-	$(call SYSTEMD_DISABLE_PKG,coredump,coredump) \
-	$(call SYSTEMD_DISABLE_PKG,hostnamed,hostnamed) \
-	$(call SYSTEMD_DISABLE_PKG,localed,localed) \
-	$(call SYSTEMD_DISABLE_PKG,modules-load,kmod) \
-	$(call SYSTEMD_DISABLE_PKG,networkd,networkd) \
-	$(call SYSTEMD_DISABLE_PKG,random-seed,randomseed) \
-	$(call SYSTEMD_DISABLE_PKG,resolved,resolved) \
-	$(call SYSTEMD_DISABLE_PKG,rfkill,rfkill) \
-	$(call SYSTEMD_DISABLE_PKG,timedated,timedated) \
-	$(call SYSTEMD_DISABLE_PKG,timesyncd,timesyncd) \
-	$(call SYSTEMD_DISABLE_PKG,tmpfiles,tmpfiles) \
-	$(call SYSTEMD_DISABLE_PKG,update-utmp,utmp)
+	--enable-networkd
 
 MESON_ARGS += \
 	-Dlibdir=/usr/lib \
