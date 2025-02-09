@@ -1,0 +1,110 @@
+From 8f699f4184e166f7721e177f97374b7c487836b3 Mon Sep 17 00:00:00 2001
+From: Raphael Gallais-Pou <raphael.gallais-pou@foss.st.com>
+Date: Thu, 6 Apr 2023 16:15:31 +0200
+Subject: [PATCH] ARM: dts: stm32: define a 128MB CMA area on stm32mp157 ed1
+ and dkx boards
+
+Grow the CMA size to 128MB. The Continuous Memory Allocator allows to
+create large chunks of continuous physical memory addresses. This
+could be typically the reserved memory for the GPU.
+
+Signed-off-by: Raphael Gallais-Pou <raphael.gallais-pou@foss.st.com>
+Change-Id: I02d5a36036000f6bd7e071612f58de94932cd1f3
+---
+ arch/arm/boot/dts/st/stm32mp157a-ed1.dts  | 9 +++++++++
+ arch/arm/boot/dts/st/stm32mp157c-ed1.dts  | 9 +++++++++
+ arch/arm/boot/dts/st/stm32mp157d-ed1.dts  | 9 +++++++++
+ arch/arm/boot/dts/st/stm32mp157f-ed1.dts  | 9 +++++++++
+ arch/arm/boot/dts/st/stm32mp15xx-dkx.dtsi | 9 +++++++++
+ 5 files changed, 45 insertions(+)
+
+--- a/arch/arm/boot/dts/st/stm32mp157a-ed1.dts
++++ b/arch/arm/boot/dts/st/stm32mp157a-ed1.dts
+@@ -78,6 +78,15 @@
+ 			reg = <0x38000000 0x10000>;
+ 			no-map;
+ 		};
++
++		/* global autoconfigured region for contiguous allocations */
++		linux,cma {
++			compatible = "shared-dma-pool";
++			reusable;
++			size = <0x8000000>;
++			alignment = <0x2000>;
++			linux,cma-default;
++		};
+ 	};
+ 
+ 	led {
+--- a/arch/arm/boot/dts/st/stm32mp157c-ed1.dts
++++ b/arch/arm/boot/dts/st/stm32mp157c-ed1.dts
+@@ -78,6 +78,15 @@
+ 			reg = <0x38000000 0x10000>;
+ 			no-map;
+ 		};
++
++		/* global autoconfigured region for contiguous allocations */
++		linux,cma {
++			compatible = "shared-dma-pool";
++			reusable;
++			size = <0x8000000>;
++			alignment = <0x2000>;
++			linux,cma-default;
++		};
+ 	};
+ 
+ 	led {
+--- a/arch/arm/boot/dts/st/stm32mp157d-ed1.dts
++++ b/arch/arm/boot/dts/st/stm32mp157d-ed1.dts
+@@ -78,6 +78,15 @@
+ 			reg = <0x38000000 0x10000>;
+ 			no-map;
+ 		};
++
++		/* global autoconfigured region for contiguous allocations */
++		linux,cma {
++			compatible = "shared-dma-pool";
++			reusable;
++			size = <0x8000000>;
++			alignment = <0x2000>;
++			linux,cma-default;
++		};
+ 	};
+ 
+ 	led {
+--- a/arch/arm/boot/dts/st/stm32mp157f-ed1.dts
++++ b/arch/arm/boot/dts/st/stm32mp157f-ed1.dts
+@@ -78,6 +78,15 @@
+ 			reg = <0x38000000 0x10000>;
+ 			no-map;
+ 		};
++
++		/* global autoconfigured region for contiguous allocations */
++		linux,cma {
++			compatible = "shared-dma-pool";
++			reusable;
++			size = <0x8000000>;
++			alignment = <0x2000>;
++			linux,cma-default;
++		};
+ 	};
+ 
+ 	led {
+--- a/arch/arm/boot/dts/st/stm32mp15xx-dkx.dtsi
++++ b/arch/arm/boot/dts/st/stm32mp15xx-dkx.dtsi
+@@ -68,6 +68,15 @@
+ 			reg = <0x38000000 0x10000>;
+ 			no-map;
+ 		};
++
++		/* global autoconfigured region for contiguous allocations */
++		linux,cma {
++			compatible = "shared-dma-pool";
++			reusable;
++			size = <0x8000000>;
++			alignment = <0x2000>;
++			linux,cma-default;
++		};
+ 	};
+ 
+ 	led {

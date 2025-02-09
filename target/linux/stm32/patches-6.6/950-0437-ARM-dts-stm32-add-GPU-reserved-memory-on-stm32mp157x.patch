@@ -1,0 +1,119 @@
+From 1cfdc35d697193d7ef95cd6b67dbe702be8d1303 Mon Sep 17 00:00:00 2001
+From: Amelie Delaunay <amelie.delaunay@foss.st.com>
+Date: Wed, 29 Nov 2023 18:30:39 +0100
+Subject: [PATCH] ARM: dts: stm32: add GPU reserved memory on stm32mp157x-ed1
+ boards
+
+Add GPU reserved memory so GPU can use contiguous-area for its buffer
+allocation needs.
+
+Change-Id: I0df7a94ba5475b947b8aff04511906cd24311269
+Signed-off-by: Pierre-Yves MORDRET <pierre-yves.mordret@foss.st.com>
+Signed-off-by: Amelie Delaunay <amelie.delaunay@foss.st.com>
+---
+ arch/arm/boot/dts/st/stm32mp157a-ed1.dts | 9 +++++++++
+ arch/arm/boot/dts/st/stm32mp157c-ed1.dts | 9 +++++++++
+ arch/arm/boot/dts/st/stm32mp157d-ed1.dts | 9 +++++++++
+ arch/arm/boot/dts/st/stm32mp157f-ed1.dts | 9 +++++++++
+ 4 files changed, 36 insertions(+)
+
+--- a/arch/arm/boot/dts/st/stm32mp157a-ed1.dts
++++ b/arch/arm/boot/dts/st/stm32mp157a-ed1.dts
+@@ -79,6 +79,11 @@
+ 			no-map;
+ 		};
+ 
++		gpu_reserved: gpu@e8000000 {
++			reg = <0xe8000000 0x8000000>;
++			no-map;
++		};
++
+ 		/* global autoconfigured region for contiguous allocations */
+ 		linux,cma {
+ 			compatible = "shared-dma-pool";
+@@ -182,6 +187,10 @@
+ 	status = "okay";
+ };
+ 
++&gpu {
++	contiguous-area = <&gpu_reserved>;
++};
++
+ &hash1 {
+ 	status = "okay";
+ };
+--- a/arch/arm/boot/dts/st/stm32mp157c-ed1.dts
++++ b/arch/arm/boot/dts/st/stm32mp157c-ed1.dts
+@@ -79,6 +79,11 @@
+ 			no-map;
+ 		};
+ 
++		gpu_reserved: gpu@e8000000 {
++			reg = <0xe8000000 0x8000000>;
++			no-map;
++		};
++
+ 		/* global autoconfigured region for contiguous allocations */
+ 		linux,cma {
+ 			compatible = "shared-dma-pool";
+@@ -186,6 +191,10 @@
+ 	status = "okay";
+ };
+ 
++&gpu {
++	contiguous-area = <&gpu_reserved>;
++};
++
+ &hash1 {
+ 	status = "okay";
+ };
+--- a/arch/arm/boot/dts/st/stm32mp157d-ed1.dts
++++ b/arch/arm/boot/dts/st/stm32mp157d-ed1.dts
+@@ -79,6 +79,11 @@
+ 			no-map;
+ 		};
+ 
++		gpu_reserved: gpu@e8000000 {
++			reg = <0xe8000000 0x8000000>;
++			no-map;
++		};
++
+ 		/* global autoconfigured region for contiguous allocations */
+ 		linux,cma {
+ 			compatible = "shared-dma-pool";
+@@ -182,6 +187,10 @@
+ 	status = "okay";
+ };
+ 
++&gpu {
++	contiguous-area = <&gpu_reserved>;
++};
++
+ &hash1 {
+ 	status = "okay";
+ };
+--- a/arch/arm/boot/dts/st/stm32mp157f-ed1.dts
++++ b/arch/arm/boot/dts/st/stm32mp157f-ed1.dts
+@@ -79,6 +79,11 @@
+ 			no-map;
+ 		};
+ 
++		gpu_reserved: gpu@e8000000 {
++			reg = <0xe8000000 0x8000000>;
++			no-map;
++		};
++
+ 		/* global autoconfigured region for contiguous allocations */
+ 		linux,cma {
+ 			compatible = "shared-dma-pool";
+@@ -186,6 +191,10 @@
+ 	status = "okay";
+ };
+ 
++&gpu {
++	contiguous-area = <&gpu_reserved>;
++};
++
+ &hash1 {
+ 	status = "okay";
+ };
