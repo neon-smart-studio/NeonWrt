@@ -1,3 +1,8 @@
+NOTE!
+The Following should be set to 'y' or default 'y' in the config/Config-kernel.in file.
+CONFIG_KERNEL_DEVTMPFS=y
+CONFIG_KERNEL_DEVTMPFS_MOUNT=y
+
 ![OpenWrt logo](include/logo.png)
 
 OpenWrt Project is a Linux operating system targeting embedded devices. Instead
