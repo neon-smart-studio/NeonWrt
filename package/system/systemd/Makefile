@@ -96,15 +96,41 @@ MESON_ARGS += \
 	-Ddefault-user-shell=/bin/sh \
 	-Dinstall-tests=false
 
+define Package/libsystemd
+  SECTION:=libs
+  CATEGORY:=Libraries
+  TITLE:=systemd client library (libsystemd)
+  DEPENDS:=+libc +libcap +libacl +libapparmor +libaudit +libblkid +libmount +libpam +libseccomp +libselinux +openssl-util
+endef
+
+define Package/libsystemd/description
+  This package provides the client-side systemd library (libsystemd),
+  which applications use to communicate with systemd services.
+endef
+
+define Package/libsystemd/install
+	$(INSTALL_DIR) $(1)/usr/lib
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libsystemd.so* $(1)/usr/lib/
+	ln -sf libsystemd.so.0 $(1)/usr/lib/libsystemd.so
+
+	$(INSTALL_DIR) $(1)/lib
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libsystemd.so* $(1)/lib
+
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/libsystemd-core-*.so $(1)/usr/lib/
+	ln -s libsystemd-core-256.so $(1)/usr/lib/libsystemd-core.so
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/libsystemd-shared-*.so $(1)/usr/lib/
+	ln -s libsystemd-shared-256.so $(1)/usr/lib/libsystemd-shared.so
+endef
+
 define Package/systemd
   SECTION:=base
   CATEGORY:=Base system
   TITLE:=Systemd init system
-  DEPENDS:=+libc +libcap +libselinux +libkmod +libgcrypt +libseccomp +libpam +libarchive +libacl +liblz4 \
-	+libxkbcommon +libapparmor +libbpf +libmicrohttpd +libcurl +libidn +libidn2 +liblzma +libzstd +libxkbcommon \
-  	+valgrind +auditd +p11-kit +bzip2 +block-mount +fstools +mount-utils +fdisk +lsblk +blkid +logger +agetty +cryptsetup +gnutls-utils +openssl-util
+  DEPENDS:=+libsystemd +libapparmor +libc +libcap +libselinux +libkmod +libgcrypt +libseccomp +libarchive +liblz4 \
+	+libacl +libpam +libxkbcommon +libbpf +libmicrohttpd +libcurl +libidn +libidn2 +liblzma +libzstd +libxkbcommon \
+  	+dbus +valgrind +auditd +p11-kit +bzip2 +block-mount +fstools +mount-utils +fdisk +lsblk +blkid +logger +agetty +cryptsetup +gnutls-utils +openssl-util
 endef
-#+kexec +dbus +p11-kit
+
 define Package/systemd/description
   systemd is a modern init system and system manager for Linux.
   (Only Support for GLIBC, Musl not Support!)
@@ -185,9 +211,6 @@ define Package/systemd/install
 		$(PKG_BUILD_DIR)/src/core/org.freedesktop.systemd1.conf \
 		$(1)/etc/dbus-1/system.d/org.freedesktop.systemd1.conf
 		
-	$(INSTALL_DIR) $(1)/lib
-	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libsystemd.so* $(1)/lib
-
 	$(INSTALL_DIR) $(1)/usr/bin
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/* $(1)/usr/bin
 
@@ -203,10 +226,9 @@ define Package/systemd/install
 	ln -sf libnss_mymachines.so.2 $(1)/usr/lib/libnss_mymachines.so
 	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libnss_resolve.so* $(1)/usr/lib
 	ln -sf libnss_resolve.so.2 $(1)/usr/lib/libnss_resolve.so
-	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libnss_systemd.so* $(1)/usr/lib
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libnss_systemd.so* $(1)/usr/libacl
+
 	ln -sf libnss_systemd.so.2 $(1)/usr/lib/libnss_systemd.so
-	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libsystemd.so* $(1)/usr/lib
-	ln -sf libsystemd.so.0 $(1)/usr/lib/libsystemd.so
 
 	$(INSTALL_DIR) $(1)/usr/lib/binfmt.d
 	$(INSTALL_DIR) $(1)/usr/lib/credstore
@@ -240,11 +262,6 @@ define Package/systemd/install
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/systemd-* $(1)/usr/lib/systemd
 	$(CP) $(PKG_INSTALL_DIR)/usr/lib/systemd/import-pubring.gpg  $(1)/usr/lib/systemd
 	$(CP) $(PKG_INSTALL_DIR)/usr/lib/systemd/resolv.conf  $(1)/usr/lib/systemd
-
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/libsystemd-core-*.so $(1)/usr/lib/
-	ln -s libsystemd-core-256.so $(1)/usr/lib/libsystemd-core.so
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/libsystemd-shared-*.so $(1)/usr/lib/
-	ln -s libsystemd-shared-256.so $(1)/usr/lib/libsystemd-shared.so
 
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/catalog
 	$(CP) \
@@ -288,16 +305,6 @@ define Package/systemd/install
 		$(1)/usr/lib/systemd/sshd_config.d
 
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system
-	#$(CP) \
-	#	$(addprefix $(PKG_INSTALL_DIR)/usr/lib/systemd/system/, \
-	#		$(SYSTEMD_SYSTEM_TARGET_WANTS) \
-	#		$(SYSTEMD_SYSTEM_TARGETS) \
-	#		$(SYSTEMD_SYSTEM_SLICES) \
-	#		$(SYSTEMD_SYSTEM_SOCKETS) \
-	#		$(SYSTEMD_SYSTEM_PATHS) \
-	#		$(SYSTEMD_SYSTEM_SERVICES) \
-	#		$(SYSTEMD_SYSTEM_MOUNTS)) \
-	#	$(1)/usr/lib/systemd/system
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/*.automount $(1)/usr/lib/systemd/system
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/*.mount $(1)/usr/lib/systemd/system
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/*.path $(1)/usr/lib/systemd/system
@@ -342,13 +349,29 @@ define Package/systemd/install
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/user@0.service.d
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/user@0.service.d/* $(1)/usr/lib/systemd/system/user@0.service.d
 
-	# 確保 getty.target.wants 目錄存在
 	$(INSTALL_DIR) $(1)/etc/systemd/system/getty.target.wants
+	# 確保 getty 服務正常啟動
 	ln -sf /usr/lib/systemd/system/getty@.service $(1)/etc/systemd/system/getty.target.wants/getty@tty1.service
-	#$(INSTALL_DIR) $(1)/etc/systemd/system/getty.target.wants
-	#$(INSTALL_DATA) \
-	#	./files/etc/systemd/system/getty.target.wants/getty@tty1.service \
-	#	$(1)/etc/systemd/system/getty.target.wants/
+
+	# 確保 systemd 其他服務啟動
+	ln -sf /usr/lib/systemd/system/systemd-networkd.service \
+		$(1)/usr/lib/systemd/system/multi-user.target.wants/systemd-networkd.service
+	ln -sf /usr/lib/systemd/system/systemd-logind.service \
+		$(1)/usr/lib/systemd/system/multi-user.target.wants/systemd-logind.service
+	ln -sf /usr/lib/systemd/system/systemd-resolved.service \
+		$(1)/usr/lib/systemd/system/multi-user.target.wants/systemd-resolved.service
+	ln -sf /usr/lib/systemd/system/systemd-timesyncd.service \
+		$(1)/usr/lib/systemd/system/sysinit.target.wants/systemd-timesyncd.service
+	ln -sf /usr/lib/systemd/system/systemd-udevd.service \
+		$(1)/usr/lib/systemd/system/sysinit.target.wants/systemd-udevd.service
+	ln -sf /usr/lib/systemd/system/systemd-udev-trigger.service \
+		$(1)/usr/lib/systemd/system/sysinit.target.wants/systemd-udev-trigger.service
+	ln -sf /usr/lib/systemd/system/systemd-journald.service \
+		$(1)/usr/lib/systemd/system/sockets.target.wants/systemd-journald.service
+	ln -sf /usr/lib/systemd/system/systemd-udevd-control.socket \
+		$(1)/usr/lib/systemd/system/sockets.target.wants/systemd-udevd-control.socket
+	ln -sf /usr/lib/systemd/system/systemd-udevd-kernel.socket \
+		$(1)/usr/lib/systemd/system/sockets.target.wants/systemd-udevd-kernel.socket
 
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system-generators
 	$(INSTALL_BIN) \
@@ -861,6 +884,7 @@ define Plugin/update-utmp/install
 #		$(foreach D, $(shell seq 1 5), $(1)/usr/lib/systemd/system/runlevel$(D).target.wants)
 endef
 
+$(eval $(call BuildPackage,libsystemd))
 $(eval $(call BuildPackage,systemd))
 $(eval $(call BuildPackage,systemd-coredump))
 $(eval $(call BuildPackage,systemd-nspawn))

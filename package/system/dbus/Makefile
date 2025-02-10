@@ -46,7 +46,7 @@ define Package/libdbus
 $(call Package/dbus/Default)
   CATEGORY:=Libraries
   TITLE+= (library)
-  DEPENDS:= +libpthread
+  DEPENDS:= +libpthread +libsystemd
 endef
 
 define Package/libdbus/Description
@@ -97,7 +97,8 @@ CONFIGURE_ARGS += \
 	--enable-inotify \
 	--disable-kqueue \
 	--disable-console-owner-file \
-	--disable-systemd \
+	--enable-systemd \
+	--with-systemdsystemunitdir=/usr/lib/systemd/system \
 	--disable-tests \
 	--disable-code-coverage \
 	--disable-x11-autolaunch \
@@ -147,6 +148,15 @@ define Package/dbus/install
 	$(INSTALL_BIN) ./files/dbus.init $(1)/etc/init.d/dbus
 	$(INSTALL_DIR) $(1)/usr/share/dbus-1
 	$(CP) $(PKG_INSTALL_DIR)/usr/share/dbus-1 $(1)/usr/share/
+
+	$(INSTALL_DIR) $(1)/usr/lib/systemd/system
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/*.service $(1)/usr/lib/systemd/system
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/*.socket $(1)/usr/lib/systemd/system
+
+	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/multi-user.target.wants
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/multi-user.target.wants/*.service $(1)/usr/lib/systemd/system/multi-user.target.wants
+	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/sockets.target.wants
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/sockets.target.wants/*.socket $(1)/usr/lib/systemd/system/sockets.target.wants
 endef
 
 define Package/dbus-utils/install

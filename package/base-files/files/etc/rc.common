@@ -7,42 +7,58 @@ shift 2
 
 SERVICE_NAME="$(basename "${initscript}")"
 
+SYSTEMCTL_CMD="/bin/systemctl"  # 確保 systemctl 來自 target
+
+# 確保 systemctl 存在
+if ! command -v "$SYSTEMCTL_CMD" >/dev/null 2>&1; then
+    echo "Error: systemctl not found. Is systemd installed?"
+    exit 1
+fi
+
 start() {
     echo "Starting systemd service: $SERVICE_NAME"
-    sudo systemctl start "$SERVICE_NAME"
+    "$SYSTEMCTL_CMD" start "$SERVICE_NAME"
 }
 
 stop() {
     echo "Stopping systemd service: $SERVICE_NAME"
-    sudo systemctl stop "$SERVICE_NAME"
+    "$SYSTEMCTL_CMD" stop "$SERVICE_NAME"
 }
 
 restart() {
     echo "Restarting systemd service: $SERVICE_NAME"
-    sudo systemctl restart "$SERVICE_NAME"
+    "$SYSTEMCTL_CMD" restart "$SERVICE_NAME"
 }
 
 reload() {
     echo "Reloading systemd service: $SERVICE_NAME"
-    sudo systemctl reload "$SERVICE_NAME" || restart
+    "$SYSTEMCTL_CMD" reload "$SERVICE_NAME" || restart
 }
 
 enable() {
     echo "Enabling systemd service: $SERVICE_NAME"
-    sudo systemctl enable "$SERVICE_NAME"
+    
+    # 如果 service 不存在，避免直接報錯
+    if ! "$SYSTEMCTL_CMD" list-unit-files | grep -q "^$SERVICE_NAME"; then
+        echo "Warning: Service $SERVICE_NAME does not exist, skipping enable."
+        return 0
+    fi
+
+    # 使用 preset 來避免 enable 時報錯
+    "$SYSTEMCTL_CMD" preset "$SERVICE_NAME" || "$SYSTEMCTL_CMD" enable "$SERVICE_NAME"
 }
 
 disable() {
     echo "Disabling systemd service: $SERVICE_NAME"
-    sudo systemctl disable "$SERVICE_NAME"
+    "$SYSTEMCTL_CMD" disable "$SERVICE_NAME"
 }
 
 enabled() {
-    sudo systemctl is-enabled "$SERVICE_NAME" && echo "Enabled" || echo "Disabled"
+    "$SYSTEMCTL_CMD" is-enabled "$SERVICE_NAME" && echo "Enabled" || echo "Disabled"
 }
 
 status() {
-    sudo systemctl status "$SERVICE_NAME"
+    "$SYSTEMCTL_CMD" status "$SERVICE_NAME"
 }
 
 help() {
@@ -54,7 +70,7 @@ Available commands:
     stop        - Stop the service
     restart     - Restart the service
     reload      - Reload configuration files
-    enable      - Enable service autostart
+    enable      - Enable service autostart (uses preset first)
     disable     - Disable service autostart
     enabled     - Check if service is enabled on boot
     status      - Show service status
