@@ -46,7 +46,7 @@ define Package/libdbus
 $(call Package/dbus/Default)
   CATEGORY:=Libraries
   TITLE+= (library)
-  DEPENDS:= +libpthread +libsystemd
+  DEPENDS:= +libpthread +libsystemd +libselinux +auditd +libcap
 endef
 
 define Package/libdbus/Description
@@ -83,17 +83,17 @@ endef
 CONFIGURE_ARGS += \
 	--disable-maintainer-mode \
 	--disable-developer \
-	--enable-debug=no \
+	--enable-debug=yes \
 	--enable-shared \
 	--disable-static \
-	--disable-verbose-mode \
+	--enable-verbose-mode \
 	--disable-asserts \
 	--disable-xml-docs \
 	--disable-doxygen-docs \
 	--disable-ducktype-docs \
-	--disable-selinux \
+	--enable-selinux \
 	--disable-apparmor \
-	--disable-libaudit \
+	--enable-libaudit \
 	--enable-inotify \
 	--disable-kqueue \
 	--disable-console-owner-file \

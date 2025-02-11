@@ -100,7 +100,7 @@ define Package/libsystemd
   SECTION:=libs
   CATEGORY:=Libraries
   TITLE:=systemd client library (libsystemd)
-  DEPENDS:=+libc +libcap +libacl +libapparmor +libaudit +libblkid +libmount +libpam +libseccomp +libselinux +openssl-util
+  DEPENDS:=+libc +libcap +libacl +libapparmor +libaudit +libblkid +libmount +libpam +libseccomp +libselinux +openssl-util +libdbus 
 endef
 
 define Package/libsystemd/description
