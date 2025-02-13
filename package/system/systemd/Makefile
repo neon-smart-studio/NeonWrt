@@ -350,8 +350,8 @@ define Package/systemd/install
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/user@0.service.d/* $(1)/usr/lib/systemd/system/user@0.service.d
 
 	$(INSTALL_DIR) $(1)/etc/systemd/system/getty.target.wants
-	# 確保 getty 服務正常啟動
 	ln -sf /usr/lib/systemd/system/getty@.service $(1)/etc/systemd/system/getty.target.wants/getty@tty1.service
+	ln -sf /usr/lib/systemd/system/serial-getty@.service $(1)/etc/systemd/system/getty.target.wants/serial-getty@ttyAMA0.service
 
 	# 確保 systemd 其他服務啟動
 	ln -sf /usr/lib/systemd/system/systemd-networkd.service \
@@ -372,6 +372,20 @@ define Package/systemd/install
 		$(1)/usr/lib/systemd/system/sockets.target.wants/systemd-udevd-control.socket
 	ln -sf /usr/lib/systemd/system/systemd-udevd-kernel.socket \
 		$(1)/usr/lib/systemd/system/sockets.target.wants/systemd-udevd-kernel.socket
+	ln -sf /usr/lib/systemd/system/systemd-tmpfiles-setup.service \
+		$(1)/usr/lib/systemd/system/sysinit.target.wants/systemd-tmpfiles-setup.service
+	ln -sf /usr/lib/systemd/system/systemd-random-seed.service \
+		$(1)/usr/lib/systemd/system/sysinit.target.wants/systemd-random-seed.service
+	ln -sf /usr/lib/systemd/system/systemd-remount-fs.service \
+		$(1)/usr/lib/systemd/system/sysinit.target.wants/systemd-remount-fs.service
+	ln -sf /usr/lib/systemd/system/systemd-fsck-root.service \
+		$(1)/usr/lib/systemd/system/sysinit.target.wants/systemd-fsck-root.service
+	ln -sf /usr/lib/systemd/system/systemd-logind.service \
+		$(1)/usr/lib/systemd/system/multi-user.target.wants/systemd-logind.service
+	ln -sf /usr/lib/systemd/system/systemd-user-sessions.service \
+		$(1)/usr/lib/systemd/system/multi-user.target.wants/systemd-user-sessions.service
+	ln -sf /usr/lib/systemd/system/systemd-journal-flush.service \
+		$(1)/usr/lib/systemd/system/sysinit.target.wants/systemd-journal-flush.service
 
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system-generators
 	$(INSTALL_BIN) \

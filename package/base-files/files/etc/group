@@ -9,6 +9,9 @@ ftp:x:55:
 users:x:100:
 network:x:101:
 nogroup:x:65534:
-systemd-journal:x:190:systemd-journal
+systemd-journal:x:190:systemd-journal:
 systemd-resolve:x:81:
 systemd-timesync:x:999:
+systemd-network:x:192:
+utmp:x:43:
+messagebus:x:81:
