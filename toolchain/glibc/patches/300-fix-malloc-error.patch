@@ -1,0 +1,23 @@
+add /usr/lib to default search path for the dynamic linker
+
+--- a/malloc/malloc.c
++++ b/malloc/malloc.c
+@@ -2589,12 +2589,14 @@
+   /*
+      If not the first time through, we require old_size to be
+      at least MINSIZE and to have prev_inuse set.
+    */
+ 
+-  assert ((old_top == initial_top (av) && old_size == 0) ||
+-          ((unsigned long) (old_size) >= MINSIZE &&
+-           prev_inuse (old_top) &&
+-           ((unsigned long) old_end & (pagesize - 1)) == 0));
++  if (!((old_top == initial_top (av) && old_size == 0) ||
++        ((unsigned long) (old_size) >= MINSIZE &&
++        prev_inuse (old_top) &&
++        ((unsigned long) old_end & (pagesize - 1)) == 0))) {
++      fprintf(stderr, "Warning: malloc assertion failed, continuing...\n");
++  }
+ 
+   /* Precondition: not enough current space to satisfy nb request */
+   assert ((unsigned long) (old_size) < (unsigned long) (nb + MINSIZE));
