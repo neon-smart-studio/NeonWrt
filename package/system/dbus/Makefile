@@ -46,7 +46,7 @@ define Package/libdbus
 $(call Package/dbus/Default)
   CATEGORY:=Libraries
   TITLE+= (library)
-  DEPENDS:= +libpthread +libsystemd +libselinux +auditd +libcap
+  DEPENDS:= +libpthread
 endef
 
 define Package/libdbus/Description
@@ -83,22 +83,21 @@ endef
 CONFIGURE_ARGS += \
 	--disable-maintainer-mode \
 	--disable-developer \
-	--enable-debug=yes \
+	--enable-debug=no \
 	--enable-shared \
 	--disable-static \
-	--enable-verbose-mode \
+	--disable-verbose-mode \
 	--disable-asserts \
 	--disable-xml-docs \
 	--disable-doxygen-docs \
 	--disable-ducktype-docs \
-	--enable-selinux \
+	--disable-selinux \
 	--disable-apparmor \
-	--enable-libaudit \
+	--disable-libaudit \
 	--enable-inotify \
 	--disable-kqueue \
 	--disable-console-owner-file \
-	--enable-systemd \
-	--with-systemdsystemunitdir=/usr/lib/systemd/system \
+	--disable-systemd \
 	--disable-tests \
 	--disable-code-coverage \
 	--disable-x11-autolaunch \
@@ -148,15 +147,6 @@ define Package/dbus/install
 	$(INSTALL_BIN) ./files/dbus.init $(1)/etc/init.d/dbus
 	$(INSTALL_DIR) $(1)/usr/share/dbus-1
 	$(CP) $(PKG_INSTALL_DIR)/usr/share/dbus-1 $(1)/usr/share/
-
-	$(INSTALL_DIR) $(1)/usr/lib/systemd/system
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/*.service $(1)/usr/lib/systemd/system
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/*.socket $(1)/usr/lib/systemd/system
-
-	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/multi-user.target.wants
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/multi-user.target.wants/*.service $(1)/usr/lib/systemd/system/multi-user.target.wants
-	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/sockets.target.wants
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/sockets.target.wants/*.socket $(1)/usr/lib/systemd/system/sockets.target.wants
 endef
 
 define Package/dbus-utils/install

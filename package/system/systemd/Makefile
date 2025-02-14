@@ -59,7 +59,7 @@ CONFIGURE_ARGS += \
 	--enable-getty \
 	--enable-shutdown \
 	--enable-pam \
-	--enable-logind \
+	--disable-logind \
 	--enable-seccomp \
 	$(CONFIGURE_ARGS_FAST_BUILD) \
 	$(CONFIGURE_ARGS_EMBEDDED) \
@@ -87,7 +87,7 @@ CONFIGURE_ARGS += \
 MESON_ARGS += \
 	-Dlibdir=/usr/lib \
 	-Dutmp=true \
-	-Dlogind=true \
+	-Dlogind=false \
 	-Dpam=enabled \
 	-Dseccomp=enabled \
 	-Dstatic-libsystemd=false \
@@ -100,7 +100,7 @@ define Package/libsystemd
   SECTION:=libs
   CATEGORY:=Libraries
   TITLE:=systemd client library (libsystemd)
-  DEPENDS:=+libc +libcap +libacl +libapparmor +libaudit +libblkid +libmount +libpam +libseccomp +libselinux +openssl-util +libdbus 
+  DEPENDS:=+libc +libcap +libacl +libapparmor +libaudit +libblkid +libmount +libpam +libseccomp +libselinux +openssl-util 
 endef
 
 define Package/libsystemd/description
@@ -128,7 +128,7 @@ define Package/systemd
   TITLE:=Systemd init system
   DEPENDS:=+libsystemd +libapparmor +libc +libcap +libselinux +libkmod +libgcrypt +libseccomp +libarchive +liblz4 \
 	+libacl +libpam +libxkbcommon +libbpf +libmicrohttpd +libcurl +libidn +libidn2 +liblzma +libzstd +libxkbcommon \
-  	+dbus +valgrind +auditd +p11-kit +bzip2 +block-mount +fstools +mount-utils +fdisk +lsblk +blkid +logger +agetty +cryptsetup +gnutls-utils +openssl-util
+  	+valgrind +auditd +p11-kit +bzip2 +block-mount +fstools +mount-utils +fdisk +lsblk +blkid +logger +agetty +cryptsetup +gnutls-utils +openssl-util
 endef
 
 define Package/systemd/description
@@ -243,14 +243,8 @@ define Package/systemd/install
 	$(INSTALL_DIR) $(1)/usr/lib/modules-load.d
 	$(INSTALL_DIR) $(1)/usr/lib/pam.d
 	$(CP) $(PKG_INSTALL_DIR)/usr/lib/pam.d/systemd-run0 $(1)/usr/lib/pam.d
-	$(CP) $(PKG_INSTALL_DIR)/usr/lib/pam.d/systemd-user $(1)/usr/lib/pam.d
 	$(INSTALL_DIR) $(1)/usr/lib/rpm/macros.d
 	$(CP) $(PKG_INSTALL_DIR)/usr/lib/rpm/macros.d/macros.systemd $(1)/usr/lib/rpm/macros.d
-	$(INSTALL_DIR) $(1)/usr/lib/security
-	$(CP) $(PKG_INSTALL_DIR)/usr/lib/security/pam_systemd.so* $(1)/usr/lib/security
-	ln -sf pam_systemd.so $(1)/usr/lib/security/pam_systemd.so
-	$(CP) $(PKG_INSTALL_DIR)/usr/lib/security/pam_systemd_loadkey.so* $(1)/usr/lib/security
-	ln -sf pam_systemd_loadkey.so $(1)/usr/lib/security/pam_systemd_loadkey.so
 
 	$(INSTALL_DIR) $(1)/usr/lib/sysctl.d
 	$(CP) \
@@ -313,7 +307,6 @@ define Package/systemd/install
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/*.socket $(1)/usr/lib/systemd/system
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/*.target $(1)/usr/lib/systemd/system
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/*.timer $(1)/usr/lib/systemd/system
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/getty@.service $(1)/usr/lib/systemd/system
 
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/graphical.target.wants
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/graphical.target.wants/* $(1)/usr/lib/systemd/system/graphical.target.wants
@@ -356,8 +349,6 @@ define Package/systemd/install
 	# 確保 systemd 其他服務啟動
 	ln -sf /usr/lib/systemd/system/systemd-networkd.service \
 		$(1)/usr/lib/systemd/system/multi-user.target.wants/systemd-networkd.service
-	ln -sf /usr/lib/systemd/system/systemd-logind.service \
-		$(1)/usr/lib/systemd/system/multi-user.target.wants/systemd-logind.service
 	ln -sf /usr/lib/systemd/system/systemd-resolved.service \
 		$(1)/usr/lib/systemd/system/multi-user.target.wants/systemd-resolved.service
 	ln -sf /usr/lib/systemd/system/systemd-timesyncd.service \
@@ -380,10 +371,6 @@ define Package/systemd/install
 		$(1)/usr/lib/systemd/system/sysinit.target.wants/systemd-remount-fs.service
 	ln -sf /usr/lib/systemd/system/systemd-fsck-root.service \
 		$(1)/usr/lib/systemd/system/sysinit.target.wants/systemd-fsck-root.service
-	ln -sf /usr/lib/systemd/system/systemd-logind.service \
-		$(1)/usr/lib/systemd/system/multi-user.target.wants/systemd-logind.service
-	ln -sf /usr/lib/systemd/system/systemd-user-sessions.service \
-		$(1)/usr/lib/systemd/system/multi-user.target.wants/systemd-user-sessions.service
 	ln -sf /usr/lib/systemd/system/systemd-journal-flush.service \
 		$(1)/usr/lib/systemd/system/sysinit.target.wants/systemd-journal-flush.service
 
