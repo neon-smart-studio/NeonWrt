@@ -343,9 +343,19 @@ define Package/systemd/install
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/user@0.service.d/* $(1)/usr/lib/systemd/system/user@0.service.d
 
 	$(INSTALL_DIR) $(1)/etc/systemd/system/getty.target.wants
-	ln -sf /usr/lib/systemd/system/getty@.service $(1)/etc/systemd/system/getty.target.wants/getty@tty1.service
-	ln -sf /usr/lib/systemd/system/serial-getty@.service $(1)/etc/systemd/system/getty.target.wants/serial-getty@ttyAMA0.service
+	# 為 `serial-getty@ttyAMA0` 建立 systemd 服務連結（適用於 Raspberry Pi 或 ARM）
+	ln -sf /usr/lib/systemd/system/serial-getty@.service \
+	    $(1)/etc/systemd/system/getty.target.wants/serial-getty@ttyAMA0.service
 
+	# 通用：確保 `serial-getty@%I` 預設開啟，避免只綁定 `ttyAMA0`
+	ln -sf /usr/lib/systemd/system/serial-getty@.service \
+	    $(1)/etc/systemd/system/getty.target.wants/serial-getty@%I.service
+	# 為 `getty@tty1` 建立 systemd 服務連結
+	ln -sf /usr/lib/systemd/system/getty@.service \
+	    $(1)/etc/systemd/system/getty.target.wants/getty@tty1.service
+
+
+	
 	# 確保 systemd 其他服務啟動
 	ln -sf /usr/lib/systemd/system/systemd-networkd.service \
 		$(1)/usr/lib/systemd/system/multi-user.target.wants/systemd-networkd.service
