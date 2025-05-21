@@ -1,91 +1,124 @@
 #!/bin/sh
-# Systemd-compatible OpenWrt init script
+# Copyright (C) 2006-2012 OpenWrt.org
+
+. $IPKG_INSTROOT/lib/functions.sh
+. $IPKG_INSTROOT/lib/functions/service.sh
 
 initscript=$1
 action=${2:-help}
 shift 2
 
-SERVICE_NAME="$(basename "${initscript}")"
-
-SYSTEMCTL_CMD="/bin/systemctl"  # 確保 systemctl 來自 target
-
-# 確保 systemctl 存在
-if ! command -v "$SYSTEMCTL_CMD" >/dev/null 2>&1; then
-    echo "Error: systemctl not found. Is systemd installed?"
-    exit 1
-fi
-
 start() {
-    echo "Starting systemd service: $SERVICE_NAME"
-    "$SYSTEMCTL_CMD" start "$SERVICE_NAME"
+	return 0
 }
 
 stop() {
-    echo "Stopping systemd service: $SERVICE_NAME"
-    "$SYSTEMCTL_CMD" stop "$SERVICE_NAME"
-}
-
-restart() {
-    echo "Restarting systemd service: $SERVICE_NAME"
-    "$SYSTEMCTL_CMD" restart "$SERVICE_NAME"
+	return 0
 }
 
 reload() {
-    echo "Reloading systemd service: $SERVICE_NAME"
-    "$SYSTEMCTL_CMD" reload "$SERVICE_NAME" || restart
+	restart
 }
 
-enable() {
-    echo "Enabling systemd service: $SERVICE_NAME"
-    
-    # 如果 service 不存在，避免直接報錯
-    if ! "$SYSTEMCTL_CMD" list-unit-files | grep -q "^$SERVICE_NAME"; then
-        echo "Warning: Service $SERVICE_NAME does not exist, skipping enable."
-        return 0
-    fi
+restart() {
+	trap '' TERM
+	stop "$@"
+	trap - TERM
+	start "$@"
+}
 
-    # 使用 preset 來避免 enable 時報錯
-    "$SYSTEMCTL_CMD" preset "$SERVICE_NAME" || "$SYSTEMCTL_CMD" enable "$SERVICE_NAME"
+boot() {
+	start "$@"
+}
+
+shutdown() {
+	stop
 }
 
 disable() {
-    echo "Disabling systemd service: $SERVICE_NAME"
-    "$SYSTEMCTL_CMD" disable "$SERVICE_NAME"
+	name="$(basename "${initscript}")"
+	rm -f "$IPKG_INSTROOT"/etc/rc.d/S??$name
+	rm -f "$IPKG_INSTROOT"/etc/rc.d/K??$name
+}
+
+enable() {
+	err=1
+	name="$(basename "${initscript}")"
+	[ "$START" ] && \
+		ln -sf "../init.d/$name" "$IPKG_INSTROOT/etc/rc.d/S${START}${name##S[0-9][0-9]}" && \
+		err=0
+	[ "$STOP" ] && \
+		ln -sf "../init.d/$name" "$IPKG_INSTROOT/etc/rc.d/K${STOP}${name##K[0-9][0-9]}" && \
+		err=0
+	return $err
 }
 
 enabled() {
-    "$SYSTEMCTL_CMD" is-enabled "$SERVICE_NAME" && echo "Enabled" || echo "Disabled"
+	name="$(basename "${initscript}")"
+	name="${name##[SK][0-9][0-9]}"
+	{
+		[ -z "${START:-}" ] || [ -L "$IPKG_INSTROOT/etc/rc.d/S${START}$name" ]
+	} && {
+		[ -z "${STOP:-}" ] || [ -L "$IPKG_INSTROOT/etc/rc.d/K${STOP}$name" ]
+	}
 }
 
-status() {
-    "$SYSTEMCTL_CMD" status "$SERVICE_NAME"
+depends() {
+	return 0
+}
+
+ALL_HELP=""
+ALL_COMMANDS="boot shutdown depends"
+extra_command() {
+	local cmd="$1"
+	local help="$2"
+
+	local extra="$(printf "%-16s%s" "${cmd}" "${help}")"
+	ALL_HELP="${ALL_HELP}\t${extra}\n"
+	ALL_COMMANDS="${ALL_COMMANDS} ${cmd}"
 }
 
 help() {
-    cat <<EOF
+	cat <<EOF
 Syntax: $initscript [command]
 
 Available commands:
-    start       - Start the service
-    stop        - Stop the service
-    restart     - Restart the service
-    reload      - Reload configuration files
-    enable      - Enable service autostart (uses preset first)
-    disable     - Disable service autostart
-    enabled     - Check if service is enabled on boot
-    status      - Show service status
 EOF
+	echo -e "$ALL_HELP"
 }
 
-list_contains() {
-    local list="$1"
-    local value="$2"
-    for item in $list; do
-        [ "$item" = "$value" ] && return 0
-    done
-    return 1
+# for procd
+start_service() {
+	return 0
 }
 
-ALL_COMMANDS="start stop restart reload enable disable enabled status help"
-list_contains "$ALL_COMMANDS" "$action" || action=help
+stop_service() {
+	return 0
+}
+
+service_triggers() {
+	return 0
+}
+
+service_running() {
+	local instance="${1:-*}"
+
+	procd_running "$(basename $initscript)" "$instance"
+}
+
+${INIT_TRACE:+set -x}
+
+extra_command "start" "Start the service"
+extra_command "stop" "Stop the service"
+extra_command "restart" "Restart the service"
+extra_command "reload" "Reload configuration files (or restart if service does not implement reload)"
+extra_command "enable" "Enable service autostart"
+extra_command "disable" "Disable service autostart"
+extra_command "enabled" "Check if service is started on boot"
+
+. "$initscript"
+
+ALL_COMMANDS="${ALL_COMMANDS} ${EXTRA_COMMANDS}"
+ALL_HELP="${ALL_HELP}${EXTRA_HELP}"
+list_contains ALL_COMMANDS "$action" || action=help
 $action "$@"

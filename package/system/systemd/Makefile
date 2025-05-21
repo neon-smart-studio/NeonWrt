@@ -59,7 +59,7 @@ CONFIGURE_ARGS += \
 	--enable-getty \
 	--enable-shutdown \
 	--enable-pam \
-	--enable-logind \
+	--disable-logind \
 	--enable-seccomp \
 	$(CONFIGURE_ARGS_FAST_BUILD) \
 	$(CONFIGURE_ARGS_EMBEDDED) \
@@ -87,7 +87,7 @@ CONFIGURE_ARGS += \
 MESON_ARGS += \
 	-Dlibdir=/usr/lib \
 	-Dutmp=true \
-	-Dlogind=true \
+	-Dlogind=false \
 	-Dpam=enabled \
 	-Dseccomp=enabled \
 	-Dstatic-libsystemd=false \
@@ -299,79 +299,66 @@ define Package/systemd/install
 		$(1)/usr/lib/systemd/sshd_config.d
 
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/*.automount $(1)/usr/lib/systemd/system
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/*.mount $(1)/usr/lib/systemd/system
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/*.path $(1)/usr/lib/systemd/system
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/*.service $(1)/usr/lib/systemd/system
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/*.slice $(1)/usr/lib/systemd/system
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/*.socket $(1)/usr/lib/systemd/system
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/*.target $(1)/usr/lib/systemd/system
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/*.timer $(1)/usr/lib/systemd/system
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/*.automount $(1)/usr/lib/systemd/system
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/*.mount $(1)/usr/lib/systemd/system
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/*.path $(1)/usr/lib/systemd/system
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/*.service $(1)/usr/lib/systemd/system
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/*.slice $(1)/usr/lib/systemd/system
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/*.socket $(1)/usr/lib/systemd/system
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/*.target $(1)/usr/lib/systemd/system
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/*.timer $(1)/usr/lib/systemd/system
 
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/graphical.target.wants
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/graphical.target.wants/* $(1)/usr/lib/systemd/system/graphical.target.wants
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/graphical.target.wants/* $(1)/usr/lib/systemd/system/graphical.target.wants
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/initrd-root-fs.target.wants
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/initrd-root-fs.target.wants/* $(1)/usr/lib/systemd/system/initrd-root-fs.target.wants
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/initrd-root-fs.target.wants/* $(1)/usr/lib/systemd/system/initrd-root-fs.target.wants
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/initrd.target.wants
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/initrd.target.wants/* $(1)/usr/lib/systemd/system/initrd.target.wants
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/initrd.target.wants/* $(1)/usr/lib/systemd/system/initrd.target.wants
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/local-fs.target.wants
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/local-fs.target.wants/* $(1)/usr/lib/systemd/system/local-fs.target.wants
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/local-fs.target.wants/* $(1)/usr/lib/systemd/system/local-fs.target.wants
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/machines.target.wants
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/machines.target.wants/* $(1)/usr/lib/systemd/system/machines.target.wants
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/machines.target.wants/* $(1)/usr/lib/systemd/system/machines.target.wants
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/multi-user.target.wants
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/multi-user.target.wants/* $(1)/usr/lib/systemd/system/multi-user.target.wants
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/multi-user.target.wants/* $(1)/usr/lib/systemd/system/multi-user.target.wants
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/remote-fs.target.wants
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/remote-fs.target.wants/* $(1)/usr/lib/systemd/system/remote-fs.target.wants
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/remote-fs.target.wants/* $(1)/usr/lib/systemd/system/remote-fs.target.wants
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/rescue.target.wants
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/rescue.target.wants/* $(1)/usr/lib/systemd/system/rescue.target.wants
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/rescue.target.wants/* $(1)/usr/lib/systemd/system/rescue.target.wants
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/runlevel1.target.wants
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/runlevel2.target.wants
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/runlevel3.target.wants
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/runlevel4.target.wants
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/runlevel5.target.wants
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/sockets.target.wants
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/sockets.target.wants/* $(1)/usr/lib/systemd/system/sockets.target.wants
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/sockets.target.wants/* $(1)/usr/lib/systemd/system/sockets.target.wants
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/sysinit.target.wants
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/sysinit.target.wants/* $(1)/usr/lib/systemd/system/sysinit.target.wants
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/sysinit.target.wants/* $(1)/usr/lib/systemd/system/sysinit.target.wants
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/timers.target.wants
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/timers.target.wants/* $(1)/usr/lib/systemd/system/timers.target.wants
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/timers.target.wants/* $(1)/usr/lib/systemd/system/timers.target.wants
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/user-.slice.d
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/user-.slice.d/* $(1)/usr/lib/systemd/system/user-.slice.d
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/user-.slice.d/* $(1)/usr/lib/systemd/system/user-.slice.d
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/user@.service.d
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/user@.service.d/* $(1)/usr/lib/systemd/system/user@.service.d
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/user@.service.d/* $(1)/usr/lib/systemd/system/user@.service.d
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/user@0.service.d
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/user@0.service.d/* $(1)/usr/lib/systemd/system/user@0.service.d
+	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/user@0.service.d/* $(1)/usr/lib/systemd/system/user@0.service.d
 
 	$(INSTALL_DIR) $(1)/etc/systemd/system/getty.target.wants
-	# 為 `serial-getty@ttyAMA0` 建立 systemd 服務連結（適用於 Raspberry Pi 或 ARM）
 	ln -sf /usr/lib/systemd/system/serial-getty@.service \
-	    $(1)/etc/systemd/system/getty.target.wants/serial-getty@ttyAMA0.service
-
-	# 通用：確保 `serial-getty@%I` 預設開啟，避免只綁定 `ttyAMA0`
-	ln -sf /usr/lib/systemd/system/serial-getty@.service \
-	    $(1)/etc/systemd/system/getty.target.wants/serial-getty@%I.service
-	# 為 `getty@tty1` 建立 systemd 服務連結
+		$(1)/etc/systemd/system/getty.target.wants/serial-getty@ttyAMA0.service
 	ln -sf /usr/lib/systemd/system/getty@.service \
 	    $(1)/etc/systemd/system/getty.target.wants/getty@tty1.service
-	
-	# logind 服務
-	ln -sf /usr/lib/systemd/system/systemd-logind.service \
-		$(1)/usr/lib/systemd/system/systemd-logind.service
-
-	$(INSTALL_DIR) $(1)/usr/share/polkit-1/actions
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/src/login/org.freedesktop.login1.policy $(1)/usr/share/polkit-1/actions
+	ln -sf /etc/systemd/system/debug-shell.service $(1)/usr/lib/systemd/system/multi-user.target.wants/debug-shell.service
 
 	# networkd 服務
 	ln -sf /usr/lib/systemd/system/systemd-networkd.service \
 		$(1)/usr/lib/systemd/system/multi-user.target.wants/systemd-networkd.service
 
+	ln -sf /usr/lib/systemd/system/systemd-networkd.socket \
+		$(1)/usr/lib/systemd/system/sockets.target.wants/systemd-networkd.socket
+
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/network-online.target.wants
 	ln -sf /usr/lib/systemd/system/network-online.target.wants/systemd-networkd-wait-online.service \
 		$(1)/usr/lib/systemd/system/network-online.target.wants/systemd-networkd-wait-online.service
-
-	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/sockets.target.wants
-	ln -sf /usr/lib/systemd/system/sockets.target.wants/systemd-networkd.socket \
-		$(1)/usr/lib/systemd/system/sockets.target.wants/systemd-networkd.socket
 
 	# 確保 systemd 其他服務啟動
 	ln -sf /usr/lib/systemd/system/systemd-resolved.service \
