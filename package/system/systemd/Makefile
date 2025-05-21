@@ -59,7 +59,7 @@ CONFIGURE_ARGS += \
 	--enable-getty \
 	--enable-shutdown \
 	--enable-pam \
-	--disable-logind \
+	--enable-logind \
 	--enable-seccomp \
 	$(CONFIGURE_ARGS_FAST_BUILD) \
 	$(CONFIGURE_ARGS_EMBEDDED) \
@@ -87,7 +87,7 @@ CONFIGURE_ARGS += \
 MESON_ARGS += \
 	-Dlibdir=/usr/lib \
 	-Dutmp=true \
-	-Dlogind=false \
+	-Dlogind=true \
 	-Dpam=enabled \
 	-Dseccomp=enabled \
 	-Dstatic-libsystemd=false \
@@ -353,12 +353,27 @@ define Package/systemd/install
 	# 為 `getty@tty1` 建立 systemd 服務連結
 	ln -sf /usr/lib/systemd/system/getty@.service \
 	    $(1)/etc/systemd/system/getty.target.wants/getty@tty1.service
-
-
 	
-	# 確保 systemd 其他服務啟動
+	# logind 服務
+	ln -sf /usr/lib/systemd/system/systemd-logind.service \
+		$(1)/usr/lib/systemd/system/systemd-logind.service
+
+	$(INSTALL_DIR) $(1)/usr/share/polkit-1/actions
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/src/login/org.freedesktop.login1.policy $(1)/usr/share/polkit-1/actions
+
+	# networkd 服務
 	ln -sf /usr/lib/systemd/system/systemd-networkd.service \
 		$(1)/usr/lib/systemd/system/multi-user.target.wants/systemd-networkd.service
+
+	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/network-online.target.wants
+	ln -sf /usr/lib/systemd/system/network-online.target.wants/systemd-networkd-wait-online.service \
+		$(1)/usr/lib/systemd/system/network-online.target.wants/systemd-networkd-wait-online.service
+
+	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/sockets.target.wants
+	ln -sf /usr/lib/systemd/system/sockets.target.wants/systemd-networkd.socket \
+		$(1)/usr/lib/systemd/system/sockets.target.wants/systemd-networkd.socket
+
+	# 確保 systemd 其他服務啟動
 	ln -sf /usr/lib/systemd/system/systemd-resolved.service \
 		$(1)/usr/lib/systemd/system/multi-user.target.wants/systemd-resolved.service
 	ln -sf /usr/lib/systemd/system/systemd-timesyncd.service \
@@ -478,6 +493,7 @@ define Package/systemd/install
 		$(1)/usr/lib/systemd
 
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/bin/systemd-tmpfiles $(1)/usr/bin
+	
 endef
 
 define Package/systemd-executor/install
@@ -512,40 +528,6 @@ define Package/libudev/install
 	$(INSTALL_DIR) $(1)/usr/include/libudev
 	$(CP) $(PKG_INSTALL_DIR)/usr/include/libudev.h $(1)/usr/include/libudev/
 endef
-
-define Package/systemd-coredump
-$(call Package/systemd/Default)
-	TITLE:=systemd coredump support
-	DEPENDS+= systemd +@KERNEL_ELF_CORE
-endef
-
-define Package/systemd-coredump/description
-$(call Package/systemd/description/Default)
-This package contains the systemd coredump support.
-endef
-
-define Package/systemd-coredump/install
-	$(INSTALL_DIR) $(1)/usr/bin
-	$(INSTALL_BIN) \
-		$(PKG_INSTALL_DIR)/usr/bin/coredumpctl \
-		$(1)/usr/bin
-
-	$(INSTALL_DIR) $(1)/usr/lib/systemd
-	$(INSTALL_BIN) \
-		$(PKG_INSTALL_DIR)/usr/lib/systemd/systemd-coredump \
-		$(1)/usr/lib/systemd
-
-	$(INSTALL_DIR) $(1)/etc/systemd
-	$(INSTALL_DATA) \
-		$(PKG_INSTALL_DIR)/etc/systemd/coredump.conf \
-		$(1)/etc/systemd
-
-	$(INSTALL_DIR) $(1)/usr/lib/sysctl.d
-	$(INSTALL_DATA) \
-		$(PKG_INSTALL_DIR)/usr/lib/sysctl.d/50-coredump.conf \
-		$(1)/usr/lib/sysctl.d
-endef
-
 
 define Package/systemd-nspawn
 $(call Package/systemd/Default)
@@ -715,49 +697,6 @@ define Plugin/modules-load/install
 		$(1)/usr/lib/systemd/system/sysinit.target.wants
 endef
 
-
-define Plugin/networkd/install
-	$(INSTALL_DIR) $(1)/usr/bin
-	$(INSTALL_BIN) \
-		$(PKG_INSTALL_DIR)/usr/bin/networkctl \
-		$(1)/usr/bin
-
-	$(INSTALL_DIR) $(1)/usr/lib/systemd/system
-	$(INSTALL_DATA) \
-		$(addprefix $(PKG_INSTALL_DIR)/usr/lib/systemd/system/, \
-			network.target \
-			network-pre.target \
-			network-online.target \
-			systemd-networkd.socket ) \
-		$(1)/usr/lib/systemd/system
-
-	$(INSTALL_DIR) $(1)/usr/lib/systemd/network
-	$(INSTALL_DATA) \
-		$(addprefix $(PKG_INSTALL_DIR)/usr/lib/systemd/network/, \
-			80-container-host0.network \
-			80-container-ve.network \
-			99-default.link ) \
-		$(1)/usr/lib/systemd/network
-
-	$(INSTALL_DIR) $(1)/etc/systemd/system/multi-user.target.wants
-	$(CP) \
-		$(PKG_INSTALL_DIR)/etc/systemd/system/multi-user.target.wants/systemd-networkd.service \
-		$(1)/etc/systemd/system/multi-user.target.wants
-
-	$(INSTALL_DIR) $(1)/etc/systemd/system/network-online.target.wants
-	$(CP) \
-		$(PKG_INSTALL_DIR)/etc/systemd/system/network-online.target.wants/systemd-networkd-wait-online.service \
-		$(1)/etc/systemd/system/network-online.target.wants
-
-	$(INSTALL_DIR) $(1)/etc/systemd/system/sockets.target.wants
-	$(CP) \
-		$(PKG_INSTALL_DIR)/etc/systemd/system/sockets.target.wants/systemd-networkd.socket \
-		$(1)/etc/systemd/system/sockets.target.wants
-
-	$(call SystemdDbusService,$$(1),network1)
-endef
-
-
 define Plugin/random-seed/install
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/sysinit.target.wants
 	$(CP) \
@@ -897,7 +836,6 @@ endef
 
 $(eval $(call BuildPackage,libsystemd))
 $(eval $(call BuildPackage,systemd))
-$(eval $(call BuildPackage,systemd-coredump))
 $(eval $(call BuildPackage,systemd-nspawn))
 $(eval $(call BuildPackage,libudev))
 #$(eval $(call BuildPackage,systemd-tmpfiles))
@@ -906,7 +844,6 @@ $(eval $(call SystemdBuildLib,bootchart,bootchart tool,))
 $(eval $(call SystemdBuildLib,hostnamed,hostname daemon,))
 $(eval $(call SystemdBuildLib,localed,locale daemon,))
 $(eval $(call SystemdBuildLib,modules-load,module loader,+libkmod))
-$(eval $(call SystemdBuildLib,networkd,network daemon,+iptables))
 $(eval $(call SystemdBuildLib,random-seed,randomseed tools,))
 $(eval $(call SystemdBuildLib,resolved,name resolver,+@EGLIBC_OPTION_EGLIBC_NSSWITCH))
 $(eval $(call SystemdBuildLib,rfkill,rfkill tools,+@USE_RFKILL))
