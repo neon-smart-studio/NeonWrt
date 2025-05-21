@@ -15,16 +15,6 @@ PKG_BUILD_DEPENDS:=intltool/host gperf/host python-jinja2/host python-pyelftools
 PKG_BUILD_PARALLEL:=1
 PKG_INSTALL:=1
 
-SYSTEMD_UDEVD_SYSTEM_SERVICES = \
-	initrd-udevadm-cleanup-db.service \
-	systemd-hwdb-update.service \
-	systemd-udev-settle.service \
-	systemd-udev-trigger.service
-
-SYSTEMD_UDEVD_SYSTEM_SOCKETS = \
-	systemd-udevd-control.socket \
-	systemd-udevd-kernel.socket
-
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/meson.mk
 
@@ -193,8 +183,18 @@ define Package/systemd/install
 	$(CP) $(PKG_INSTALL_DIR)/etc/udev/iocost.conf $(1)/etc/udev
 	$(CP) $(PKG_INSTALL_DIR)/etc/udev/udev.conf $(1)/etc/udev
 
-	$(INSTALL_DIR) $(1)/etc/udev/hwdb.d.d
-	$(INSTALL_DIR) $(1)/etc/udev/rules.d
+	$(INSTALL_DIR) $(1)/usr/lib/udev
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/udev/ata_id $(1)/usr/lib/udev
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/udev/cdrom_id $(1)/usr/lib/udev
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/udev/dmi_memory_id $(1)/usr/lib/udev
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/udev/fido_id $(1)/usr/lib/udev
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/udev/iocost $(1)/usr/lib/udev
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/udev/mtd_probe $(1)/usr/lib/udev
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/udev/scsi_id $(1)/usr/lib/udev
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/udev/v4l_id $(1)/usr/lib/udev
+
+	$(INSTALL_DIR) $(1)/usr/lib/udev/rules.d
+	$(INSTALL_DIR) $(1)/usr/lib/udev/hwdb.d
 
 	$(INSTALL_DIR) $(1)/etc/X11/xinit/xinitrc.d
 	$(CP) $(PKG_INSTALL_DIR)/etc/X11/xinit/xinitrc.d/50-systemd-user.sh $(1)/etc/X11/xinit/xinitrc.d
@@ -347,7 +347,7 @@ define Package/systemd/install
 		$(1)/etc/systemd/system/getty.target.wants/serial-getty@ttyAMA0.service
 	ln -sf /usr/lib/systemd/system/getty@.service \
 	    $(1)/etc/systemd/system/getty.target.wants/getty@tty1.service
-	ln -sf /etc/systemd/system/debug-shell.service $(1)/usr/lib/systemd/system/multi-user.target.wants/debug-shell.service
+	ln -sf /etc/systemd/system/serial-shell.service $(1)/usr/lib/systemd/system/multi-user.target.wants/serial-shell.service
 
 	# networkd 服務
 	ln -sf /usr/lib/systemd/system/systemd-networkd.service \
@@ -597,228 +597,16 @@ define Build/InstallDev
 	$(CP) $(PKG_INSTALL_DIR)/usr/lib/pkgconfig/*.pc $(1)/usr/lib/pkgconfig
 endef
 
-
-define SystemdBuildLib
-  define Package/systemd-$(1)
-	$(call Package/systemd/Default)
-	TITLE:=systemd $(2)
-	DEPENDS+= systemd $(3)
-  endef
-
-  define Package/systemd-$(1)/description
-  $(call Package/systemd/description/Default)
-  This package contains the systemd $(2).
-  endef
-
-  define Package/systemd-$(1)/install
-	# daemon
-	$(INSTALL_DIR) $$(1)/usr/lib/systemd
-	$(INSTALL_BIN) \
-		$(PKG_INSTALL_DIR)/usr/lib/systemd/systemd-$(1)* \
-		$$(1)/usr/lib/systemd
-	# service (systemd)
-	$(INSTALL_DIR) $$(1)/usr/lib/systemd/system
-	$(INSTALL_DATA) \
-		$(PKG_INSTALL_DIR)/usr/lib/systemd/system/systemd-$(1)*.service \
-		$$(1)/usr/lib/systemd/system
-	# custom
-	$(call Plugin/$(1)/install,$$(1))
-  endef
-
-  $$(eval $$(call BuildPackage,systemd-$(1)))
-endef
-
-define SystemdDbusService
-	$(INSTALL_DIR) $(1)/usr/lib/systemd/system
-	$(CP) \
-		$(PKG_INSTALL_DIR)/usr/lib/systemd/system/dbus-org.freedesktop.$(2).service \
-		$(1)/usr/lib/systemd/system
-
-	$(INSTALL_DIR) $(1)/etc/dbus-1/system.d
-	$(INSTALL_DATA) \
-		$(PKG_INSTALL_DIR)/etc/dbus-1/system.d/org.freedesktop.$(2).conf \
-		$(1)/etc/dbus-1/system.d
-
-	$(INSTALL_DIR) $(1)/usr/share/dbus-1/system-services
-	$(INSTALL_DATA) \
-		$(PKG_INSTALL_DIR)/usr/share/dbus-1/system-services/org.freedesktop.$(2).service \
-		$(1)/usr/share/dbus-1/system-services
-endef
-
-
-define Plugin/bootchart/install
-	$(INSTALL_DIR) $(1)/etc/systemd
-	$(INSTALL_DATA) \
-		$(PKG_INSTALL_DIR)/etc/systemd/bootchart.conf \
-		$(1)/etc/systemd
-endef
-
-
-define Plugin/hostnamed/install
-	$(INSTALL_DIR) $(1)/usr/bin
-	$(INSTALL_BIN) \
-		$(PKG_INSTALL_DIR)/usr/bin/hostnamectl \
-		$(1)/usr/bin
-
-	$(call SystemdDbusService,$$(1),hostname1)
-endef
-
-
-define Plugin/localed/install
-	$(INSTALL_DIR) $(1)/usr/bin
-	$(INSTALL_BIN) \
-		$(PKG_INSTALL_DIR)/usr/bin/localectl \
-		$(1)/usr/bin
-
-	$(call SystemdDbusService,$$(1),locale1)
-endef
-
-
-define Plugin/modules-load/install
-	$(INSTALL_DIR) $(1)/etc/modules-load.d
-	$(INSTALL_DIR) $(1)/usr/lib/modules-load.d
-
-	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/sysinit.target.wants
-	$(CP) \
-		$(PKG_INSTALL_DIR)/usr/lib/systemd/system/sysinit.target.wants/systemd-modules-load.service \
-		$(1)/usr/lib/systemd/system/sysinit.target.wants
-endef
-
-define Plugin/random-seed/install
-	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/sysinit.target.wants
-	$(CP) \
-		$(PKG_INSTALL_DIR)/usr/lib/systemd/system/sysinit.target.wants/systemd-random-seed.service \
-		$(1)/usr/lib/systemd/system/sysinit.target.wants
-endef
-
-
-define Plugin/resolved/install
-	$(INSTALL_DIR) $(1)/etc/systemd
-	$(INSTALL_DATA) \
-		$(PKG_INSTALL_DIR)/etc/systemd/resolved.conf \
-		$(1)/etc/systemd
-
-	$(INSTALL_DIR) $(1)/etc/systemd/system/multi-user.target.wants
-	$(CP) \
-		$(PKG_INSTALL_DIR)/etc/systemd/system/multi-user.target.wants/systemd-resolved.service \
-		$(1)/etc/systemd/system/multi-user.target.wants
-
-	$(INSTALL_DIR) $(1)/lib
-	$(INSTALL_BIN) \
-		$(PKG_INSTALL_DIR)/usr/lib/libnss_resolve.so* \
-		$(1)/lib
-
-	$(INSTALL_DIR) $(1)/usr/lib/systemd
-	$(INSTALL_BIN) \
-		$(PKG_INSTALL_DIR)/usr/lib/systemd/systemd-resolve-host \
-		$(1)/usr/lib/systemd
-
-	$(call SystemdDbusService,$$(1),resolve1)
-endef
-
 define Package/systemd-resolved/conffiles
 /etc/systemd/resolved.conf
-endef
-
-
-define Plugin/timedated/install
-	$(INSTALL_DIR) $(1)/usr/bin
-	$(INSTALL_BIN) \
-		$(PKG_INSTALL_DIR)/usr/bin/timedatectl \
-		$(1)/usr/bin
-
-	$(call SystemdDbusService,$$(1),timedate1)
-endef
-
-
-define Plugin/timesyncd/install
-	$(INSTALL_DIR) $(1)/etc/systemd
-	$(INSTALL_DATA) \
-		$(PKG_INSTALL_DIR)/etc/systemd/timesyncd.conf \
-		$(1)/etc/systemd
-
-	$(INSTALL_DIR) $(1)/etc/systemd/system/sysinit.target.wants
-	$(CP) \
-		$(PKG_INSTALL_DIR)/etc/systemd/system/sysinit.target.wants/systemd-timesyncd.service \
-		$(1)/etc/systemd/system/sysinit.target.wants
 endef
 
 define Package/systemd-timesyncd/conffiles
 /etc/systemd/timesyncd.conf
 endef
 
-define Plugin/udevd/install
-	$(INSTALL_DIR) $(1)/etc/udev/rules.d
-	$(INSTALL_DATA) \
-		$(PKG_INSTALL_DIR)/etc/udev/udev.conf \
-		$(1)/etc/udev
-
-	$(INSTALL_DIR) $(1)/usr/bin
-	$(INSTALL_BIN) \
-		$(PKG_INSTALL_DIR)/usr/bin/udevadm \
-		$(1)/usr/bin
-
-	$(INSTALL_DIR) $(1)/usr/bin
-	$(INSTALL_BIN) \
-		$(PKG_INSTALL_DIR)/usr/bin/systemd-hwdb \
-		$(1)/usr/bin
-
-	$(INSTALL_DIR) $(1)/usr/lib/systemd/system
-	$(INSTALL_DATA) \
-		$(addprefix $(PKG_INSTALL_DIR)/usr/lib/systemd/system/, \
-			$(SYSTEMD_UDEVD_SYSTEM_SERVICES) \
-			$(SYSTEMD_UDEVD_SYSTEM_SOCKETS)) \
-		$(1)/usr/lib/systemd/system
-
-	$(INSTALL_DIR) $(1)/usr/lib/udev
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/udev/ata_id $(1)/usr/lib/udev
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/udev/cdrom_id $(1)/usr/lib/udev
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/udev/dmi_memory_id $(1)/usr/lib/udev
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/udev/fido_id $(1)/usr/lib/udev
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/udev/iocost $(1)/usr/lib/udev
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/udev/mtd_probe $(1)/usr/lib/udev
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/udev/scsi_id $(1)/usr/lib/udev
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/udev/v4l_id $(1)/usr/lib/udev
-
-	$(INSTALL_DIR) $(1)/usr/lib/udev/rules.d
-	$(CP) \
-		$(PKG_INSTALL_DIR)/usr/lib/udev/rules.d/*.rules \
-		$(1)/usr/lib/udev/rules.d
-
-	$(INSTALL_DIR) $(1)/usr/lib/udev/hwdb.d
-	$(CP) \
-		$(PKG_INSTALL_DIR)/usr/lib/udev/hwdb.d/*.hwdb \
-		$(1)/usr/lib/udev/hwdb.d
-
-	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/sysinit.target.wants
-	$(CP) \
-		$(addprefix $(PKG_INSTALL_DIR)/usr/lib/systemd/system/sysinit.target.wants/, \
-			systemd-udevd.service \
-			systemd-udev-trigger.service ) \
-		$(1)/usr/lib/systemd/system/sysinit.target.wants
-
-	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/sockets.target.wants
-	$(CP) \
-		$(addprefix $(PKG_INSTALL_DIR)/usr/lib/systemd/system/sockets.target.wants/, \
-			systemd-udevd-control.socket \
-			systemd-udevd-kernel.socket ) \
-		$(1)/usr/lib/systemd/system/sockets.target.wants
-endef
-
 define Package/systemd-udevd/conffiles
 /etc/udev/udev.conf
-endef
-
-define Plugin/update-utmp/install
-	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/sysinit.target.wants
-	$(CP) \
-		$(PKG_INSTALL_DIR)/usr/lib/systemd/system/sysinit.target.wants/systemd-update-utmp.service \
-		$(1)/usr/lib/systemd/system/sysinit.target.wants
-
-# FIXME: /usr/lib/systemd/system/runlevel$(seq 1 5).target.wants/systemd-update-utmp-runlevel.service
-# directories and symlinks
-#	$(INSTALL_DIR) \
-#		$(foreach D, $(shell seq 1 5), $(1)/usr/lib/systemd/system/runlevel$(D).target.wants)
 endef
 
 $(eval $(call BuildPackage,libsystemd))
@@ -826,15 +614,3 @@ $(eval $(call BuildPackage,systemd))
 $(eval $(call BuildPackage,systemd-nspawn))
 $(eval $(call BuildPackage,libudev))
 #$(eval $(call BuildPackage,systemd-tmpfiles))
-
-$(eval $(call SystemdBuildLib,bootchart,bootchart tool,))
-$(eval $(call SystemdBuildLib,hostnamed,hostname daemon,))
-$(eval $(call SystemdBuildLib,localed,locale daemon,))
-$(eval $(call SystemdBuildLib,modules-load,module loader,+libkmod))
-$(eval $(call SystemdBuildLib,random-seed,randomseed tools,))
-$(eval $(call SystemdBuildLib,resolved,name resolver,+@EGLIBC_OPTION_EGLIBC_NSSWITCH))
-$(eval $(call SystemdBuildLib,rfkill,rfkill tools,+@USE_RFKILL))
-$(eval $(call SystemdBuildLib,timedated,timedate daemon,))
-$(eval $(call SystemdBuildLib,timesyncd,network time synchronization,))
-$(eval $(call SystemdBuildLib,udevd,device manager,))
-$(eval $(call SystemdBuildLib,update-utmp,utmp/wtmp log handling,))

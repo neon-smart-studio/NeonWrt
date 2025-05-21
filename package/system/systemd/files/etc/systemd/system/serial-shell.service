@@ -1,0 +1,10 @@
+[Unit]
+Description=Serial getty terminals start
+After=multi-user.target
+
+[Service]
+Type=idle
+ExecStart=/usr/sbin/agetty --autologin root --keep-baud ttyAMA0 115200,57600,38400,9600 linux
+
+[Install]
+WantedBy=multi-user.target

@@ -1,1 +1,1 @@
-console=serial0,115200 loglevel=7 debug root=/dev/mmcblk0p2 rootfstype=ext4 rw rootwait init=/usr/lib/systemd/systemd rd.systemd=1 devtmpfs.mount=1
+console=tty1 console=serial0,115200 loglevel=7 debug root=/dev/mmcblk0p2 rootfstype=ext4 rw rootwait init=/usr/lib/systemd/systemd rd.systemd=1 devtmpfs.mount=1
