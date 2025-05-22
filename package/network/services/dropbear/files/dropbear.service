@@ -1,0 +1,14 @@
+[Unit]
+Description=Dropbear SSH server
+After=local-fs.target systemd-remount-fs.service
+Requires=systemd-remount-fs.service
+
+[Service]
+Type=simple
+ExecStartPre=/bin/sh -c '[ -f /etc/dropbear/dropbear_rsa_host_key ] || /usr/bin/dropbearkey -t rsa -f /etc/dropbear/dropbear_rsa_host_key'
+ExecStartPre=/bin/sh -c '[ -f /etc/dropbear/dropbear_ed25519_host_key ] || /usr/bin/dropbearkey -t ed25519 -f /etc/dropbear/dropbear_ed25519_host_key'
+ExecStart=/usr/sbin/dropbear -F -E
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

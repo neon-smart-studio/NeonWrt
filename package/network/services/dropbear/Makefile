@@ -223,9 +223,12 @@ define Package/dropbear/install
 	$(INSTALL_DIR) $(1)/etc/config
 	$(INSTALL_CONF) ./files/dropbear.config $(1)/etc/config/dropbear
 	$(INSTALL_DIR) $(1)/etc/init.d
-	$(INSTALL_BIN) ./files/dropbear.init $(1)/etc/init.d/dropbear
 	$(INSTALL_DIR) $(1)/etc/dropbear
 	$(INSTALL_DIR) $(1)/lib/preinit
+	$(INSTALL_DIR) $(1)/usr/lib/systemd/system
+	$(INSTALL_DATA) ./files/dropbear.service $(1)/usr/lib/systemd/system/dropbear.service
+	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/multi-user.target.wants
+	ln -sf ../dropbear.service $(1)/usr/lib/systemd/system/multi-user.target.wants/dropbear.service
 	$(INSTALL_DATA) ./files/dropbear.failsafe $(1)/lib/preinit/99_10_failsafe_dropbear
 	$(INSTALL_DIR) $(1)/etc/uci-defaults
 	$(INSTALL_DATA) ./files/dropbear.defaults $(1)/etc/uci-defaults/50-dropbear
