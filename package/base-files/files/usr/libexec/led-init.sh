@@ -1,7 +1,7 @@
-#!/bin/sh /etc/rc.common
+#!/bin/sh
 # Copyright (C) 2008 OpenWrt.org
 
-START=96
+. /lib/functions.sh
 
 led_color_set() {
 	local cfg="$1"
@@ -196,3 +196,5 @@ start() {
 		config_foreach load_led led "$1"
 	}
 }
+
+start "$@"

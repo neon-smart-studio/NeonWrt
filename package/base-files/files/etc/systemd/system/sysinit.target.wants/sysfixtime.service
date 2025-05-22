@@ -1,0 +1,14 @@
+[Unit]
+Description=Fix RTC time on boot
+DefaultDependencies=no
+Before=systemd-timesyncd.service time-sync.target
+ConditionPathExists=/usr/libexec/sysfixtime.sh
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/sysfixtime.sh start
+ExecStop=/usr/libexec/sysfixtime.sh stop
+RemainAfterExit=true
+
+[Install]
+WantedBy=sysinit.target

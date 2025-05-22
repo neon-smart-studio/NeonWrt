@@ -1,0 +1,13 @@
+[Unit]
+Description=LED Initialization from /etc/config/system
+DefaultDependencies=no
+After=systemd-udevd.service
+Before=sysinit.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/led-init.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=sysinit.target

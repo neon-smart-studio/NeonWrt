@@ -1,0 +1,14 @@
+[Unit]
+Description=Initialize GPIO switch states from /etc/config/system
+After=systemd-udevd.service
+DefaultDependencies=no
+Requires=local-fs.target
+Before=sysinit.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+ExecStart=/usr/libexec/gpio-switch-init.sh
+
+[Install]
+WantedBy=sysinit.target

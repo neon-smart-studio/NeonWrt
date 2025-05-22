@@ -256,6 +256,17 @@ else
 	$(if $(CONFIG_IPK_FILES_CHECKSUMS),, \
 		rm -f $(1)/sbin/pkg_check)
 endif
+
+	$(INSTALL_DIR) $(1)/usr/lib/systemd/system
+	$(INSTALL_DATA) ./files/etc/systemd/system/sysinit.target.wants/gpio_switch.service $(1)/usr/lib/systemd/system/
+	$(INSTALL_DATA) ./files/etc/systemd/system/sysinit.target.wants/led.service $(1)/usr/lib/systemd/system/
+	$(INSTALL_DATA) ./files/etc/systemd/system/sysinit.target.wants/sysfixtime.service $(1)/usr/lib/systemd/system/
+
+	# 這樣會在 build 時自動啟用 service
+	$(INSTALL_DIR) $(1)/etc/systemd/system/sysinit.target.wants
+	ln -sf /usr/lib/systemd/system/gpio_switch.service $(1)/etc/systemd/system/sysinit.target.wants/gpio_switch.service
+	ln -sf /usr/lib/systemd/system/led.service $(1)/etc/systemd/system/sysinit.target.wants/led.service
+	ln -sf /usr/lib/systemd/system/sysfixtime.service $(1)/etc/systemd/system/sysinit.target.wants/sysfixtime.service
 endef
 
 ifneq ($(DUMP),1)
