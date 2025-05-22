@@ -40,6 +40,20 @@ define Package/python3-pyelftools/description
 Library for analyzing ELF files and DWARF debugging information
 endef
 
+define Host/Compile
+	$(call HostPython3/Run, \
+		$(HOST_BUILD_DIR), \
+		-m pip install --no-cache-dir --prefix="$(STAGING_DIR_HOSTPKG)" pyelftools==$(PKG_VERSION))
+endef
+
+define Host/Install
+endef
+
+define Host/Package/python3-pyelftools
+  SECTION:=host
+  CATEGORY:=Languages
+endef
+
 $(eval $(call Py3Package,python3-pyelftools))
 $(eval $(call BuildPackage,python3-pyelftools))
 $(eval $(call BuildPackage,python3-pyelftools-src))

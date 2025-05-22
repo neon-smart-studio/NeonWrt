@@ -11,6 +11,8 @@ endif
 
 PKG_BUILD_DIR = $(BUILD_DIR)/$(PKG_NAME)-$(BUILD_VARIANT)/$(PKG_NAME)-$(PKG_VERSION)
 
+PKG_BUILD_DEPENDS += python-cryptography/host python-pyelftools/host
+
 PKG_TARGETS := bin
 PKG_FLAGS:=nonshared
 
@@ -18,14 +20,6 @@ PKG_LICENSE:=BSD 2-Clause
 PKG_LICENSE_FILES:=LICENSE
 
 PKG_BUILD_PARALLEL ?= 1
-
-$(eval $(call TestHostCommand,python3-cryptography, \
-  Please install the Python3 cryptography module, \
-  $(STAGING_DIR_HOST)/bin/python3 -c 'import cryptography'))
-
-$(eval $(call TestHostCommand,python3-pyelftools, \
-    Please install the Python3 pyelftools module, \
-    $(STAGING_DIR_HOST)/bin/python3 -c 'import elftools'))
 
 export GCC_HONOUR_COPTS=s
 

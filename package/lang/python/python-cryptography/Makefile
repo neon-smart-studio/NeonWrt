@@ -23,6 +23,7 @@ PKG_BUILD_DEPENDS:=libffi/host python-cffi/host python-setuptools-rust/host
 
 include ../pypi.mk
 include $(INCLUDE_DIR)/package.mk
+include $(INCLUDE_DIR)/host-build.mk
 include ../python3-package.mk
 
 define Package/python3-cryptography
@@ -47,6 +48,21 @@ primitives to Python developers. Our goal is for it to be your
 "cryptographic standard library".
 endef
 
+define Host/Compile
+	$(call HostPython3/Run, \
+		$(HOST_BUILD_DIR), \
+		-m pip install --no-cache-dir --prefix="$(STAGING_DIR_HOSTPKG)" cryptography==$(PKG_VERSION))
+endef
+
+define Host/Install
+endef
+
+define Host/Package/python3-cryptography
+  SECTION:=host
+  CATEGORY:=Languages
+endef
+
 $(eval $(call Py3Package,python3-cryptography))
 $(eval $(call BuildPackage,python3-cryptography))
 $(eval $(call BuildPackage,python3-cryptography-src))
+$(eval $(call HostBuild))
