@@ -465,6 +465,13 @@ define KernelPackage/brcmfmac/config
   endif
 endef
 
+define KernelPackage/brcmfmac/install
+	$(INSTALL_DIR) $(1)/lib/firmware/brcm
+	ln -sf brcmfmac43455-sdio.bin $(1)/lib/firmware/brcm/brcmfmac43455-sdio.raspberrypi,3-model-b-plus.bin
+	ln -sf brcmfmac43455-sdio.bin $(1)/lib/firmware/brcm/brcmfmac43455-sdio.raspberrypi,4-model-b.bin
+	ln -sf brcmfmac43455-sdio.bin $(1)/lib/firmware/brcm/brcmfmac43455-sdio.raspberrypi,4-compute-module.bin
+	ln -sf brcmfmac43455-sdio.bin $(1)/lib/firmware/brcm/brcmfmac43455-sdio.raspberrypi,5-model-b.bin
+endef
 
 define KernelPackage/b43/install
 	rm -rf $(1)/lib/firmware/

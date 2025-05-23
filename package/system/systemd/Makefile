@@ -342,6 +342,8 @@ define Package/systemd/install
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/user@0.service.d
 	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/user@0.service.d/* $(1)/usr/lib/systemd/system/user@0.service.d
 
+	ln -sf /etc/systemd/system/load-kmods.service $(1)/usr/lib/systemd/system/sysinit.target.wants/load-kmods.service
+
 	$(INSTALL_DIR) $(1)/etc/systemd/system/getty.target.wants
 	ln -sf /usr/lib/systemd/system/serial-getty@.service \
 		$(1)/etc/systemd/system/getty.target.wants/serial-getty@ttyAMA0.service
@@ -385,6 +387,7 @@ define Package/systemd/install
 		$(1)/usr/lib/systemd/system/sysinit.target.wants/systemd-fsck-root.service
 	ln -sf /usr/lib/systemd/system/systemd-journal-flush.service \
 		$(1)/usr/lib/systemd/system/sysinit.target.wants/systemd-journal-flush.service
+
 
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system-generators
 	$(INSTALL_BIN) \

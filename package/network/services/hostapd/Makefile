@@ -728,10 +728,20 @@ define Package/hostapd-common/install
 	  $(1)/usr/share/acl.d \
 	  $(1)/usr/share/hostap
 	$(INSTALL_BIN) ./files/dhcp-get-server.sh $(1)/lib/netifd/dhcp-get-server.sh
-	$(INSTALL_BIN) ./files/wpad.init $(1)/etc/init.d/wpad
 	$(INSTALL_BIN) ./files/wps-hotplug.sh $(1)/etc/rc.button/wps
 	$(INSTALL_DATA) ./files/wpad_acl.json $(1)/usr/share/acl.d
 	$(INSTALL_DATA) ./files/wpad.json $(1)/etc/capabilities
+  
+	$(INSTALL_DIR) $(1)/usr/bin
+	$(INSTALL_BIN) ./files/generate-hostapd-conf.sh $(1)/usr/bin/generate-hostapd-conf.sh
+
+	$(INSTALL_DIR) $(1)/usr/lib/systemd/system
+	$(INSTALL_DATA) ./files/hostapd.service $(1)/usr/lib/systemd/system/
+	$(INSTALL_DATA) ./files/wpad.service $(1)/usr/lib/systemd/system/
+  
+	$(INSTALL_DIR) $(1)/etc/systemd/system/multi-user.target.wants
+	ln -sf /usr/lib/systemd/system/hostapd.service $(1)/etc/systemd/system/multi-user.target.wants/hostapd.service
+	ln -sf /usr/lib/systemd/system/wpad.service $(1)/etc/systemd/system/multi-user.target.wants/wpad.service
 endef
 
 define Package/hostapd/install

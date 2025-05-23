@@ -1,0 +1,14 @@
+[Unit]
+Description=Hostapd IEEE 802.11 AP
+After=network.target
+
+[Service]
+Type=simple
+ExecStartPre=/usr/bin/generate-hostapd-conf.sh
+ExecStart=/usr/bin/env bash -c '\
+  ( [ -x /usr/sbin/hostapd ] && exec /usr/sbin/hostapd -s /var/run/hostapd.conf ) & \
+  ( [ -x /usr/sbin/wpa_supplicant ] && exec /usr/sbin/wpa_supplicant -n -s -g /var/run/wpa_supplicant/global ) & \
+  wait -n'
+
+[Install]
+WantedBy=multi-user.target
