@@ -1,0 +1,15 @@
+[Unit]
+Description=DNS and DHCP Server (dnsmasq)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+ExecStartPre=/usr/libexec/generate-dnsmasq-config.sh
+ExecStart=/usr/sbin/dnsmasq -C /var/etc/dnsmasq.default.conf -k
+ExecReload=/bin/sh -c '/usr/libexec/generate-dnsmasq-config.sh && kill -HUP $MAINPID'
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

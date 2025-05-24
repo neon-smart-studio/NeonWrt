@@ -169,9 +169,13 @@ define Package/dnsmasq/install
 	$(CP) $(PKG_INSTALL_DIR)/usr/sbin/dnsmasq $(1)/usr/sbin/
 	$(INSTALL_DIR) $(1)/etc/config
 	$(INSTALL_CONF) ./files/dhcp.conf $(1)/etc/config/dhcp
-	$(INSTALL_CONF) ./files/dnsmasq.conf $(1)/etc/dnsmasq.conf
-	$(INSTALL_DIR) $(1)/etc/init.d
-	$(INSTALL_BIN) ./files/dnsmasq.init $(1)/etc/init.d/dnsmasq
+	$(INSTALL_CONF) ./files/dnsmasq.conf $(1)/etc/dnsmasq.conffiles
+	$(INSTALL_DIR) $(1)/etc/systemd/system
+	$(INSTALL_DATA) ./files/dnsmasq.service $(1)/etc/systemd/system/
+	$(INSTALL_DIR) $(1)/etc/systemd/system/multi-user.target.wants
+	ln -sf /etc/systemd/system/dnsmasq.service $(1)/etc/systemd/system/multi-user.target.wants/dnsmasq.service
+	$(INSTALL_DIR) $(1)/usr/libexec
+	$(INSTALL_BIN) ./files/generate-dnsmasq-config.sh $(1)/usr/libexec/
 	$(INSTALL_DIR) $(1)/etc/hotplug.d/dhcp
 	$(INSTALL_DIR) $(1)/etc/hotplug.d/neigh
 	$(INSTALL_DIR) $(1)/etc/hotplug.d/ntp
@@ -185,8 +189,6 @@ define Package/dnsmasq/install
 	$(INSTALL_DIR) $(1)/usr/share/acl.d
 	$(INSTALL_DATA) ./files/dnsmasq_acl.json $(1)/usr/share/acl.d/
 	$(INSTALL_DIR) $(1)/etc/uci-defaults
-	$(INSTALL_BIN) ./files/50-dnsmasq-migrate-resolv-conf-auto.sh $(1)/etc/uci-defaults
-	$(INSTALL_BIN) ./files/50-dnsmasq-migrate-ipset.sh $(1)/etc/uci-defaults
 endef
 
 Package/dnsmasq-dhcpv6/install = $(Package/dnsmasq/install)

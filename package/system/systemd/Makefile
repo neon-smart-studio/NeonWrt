@@ -309,40 +309,38 @@ define Package/systemd/install
 	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/*.timer $(1)/usr/lib/systemd/system
 
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/graphical.target.wants
-	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/graphical.target.wants/* $(1)/usr/lib/systemd/system/graphical.target.wants
+	$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/graphical.target.wants/* $(1)/usr/lib/systemd/system/graphical.target.wants
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/initrd-root-fs.target.wants
-	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/initrd-root-fs.target.wants/* $(1)/usr/lib/systemd/system/initrd-root-fs.target.wants
+	$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/initrd-root-fs.target.wants/* $(1)/usr/lib/systemd/system/initrd-root-fs.target.wants
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/initrd.target.wants
-	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/initrd.target.wants/* $(1)/usr/lib/systemd/system/initrd.target.wants
+	$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/initrd.target.wants/* $(1)/usr/lib/systemd/system/initrd.target.wants
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/local-fs.target.wants
-	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/local-fs.target.wants/* $(1)/usr/lib/systemd/system/local-fs.target.wants
+	$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/local-fs.target.wants/* $(1)/usr/lib/systemd/system/local-fs.target.wants
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/machines.target.wants
-	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/machines.target.wants/* $(1)/usr/lib/systemd/system/machines.target.wants
+	$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/machines.target.wants/* $(1)/usr/lib/systemd/system/machines.target.wants
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/multi-user.target.wants
-	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/multi-user.target.wants/* $(1)/usr/lib/systemd/system/multi-user.target.wants
+	$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/multi-user.target.wants/* $(1)/usr/lib/systemd/system/multi-user.target.wants
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/remote-fs.target.wants
-	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/remote-fs.target.wants/* $(1)/usr/lib/systemd/system/remote-fs.target.wants
+	$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/remote-fs.target.wants/* $(1)/usr/lib/systemd/system/remote-fs.target.wants
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/rescue.target.wants
-	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/rescue.target.wants/* $(1)/usr/lib/systemd/system/rescue.target.wants
+	$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/rescue.target.wants/* $(1)/usr/lib/systemd/system/rescue.target.wants
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/runlevel1.target.wants
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/runlevel2.target.wants
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/runlevel3.target.wants
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/runlevel4.target.wants
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/runlevel5.target.wants
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/sockets.target.wants
-	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/sockets.target.wants/* $(1)/usr/lib/systemd/system/sockets.target.wants
+	$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/sockets.target.wants/* $(1)/usr/lib/systemd/system/sockets.target.wants
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/sysinit.target.wants
-	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/sysinit.target.wants/* $(1)/usr/lib/systemd/system/sysinit.target.wants
+	$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/sysinit.target.wants/* $(1)/usr/lib/systemd/system/sysinit.target.wants
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/timers.target.wants
-	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/timers.target.wants/* $(1)/usr/lib/systemd/system/timers.target.wants
+	$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/timers.target.wants/* $(1)/usr/lib/systemd/system/timers.target.wants
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/user-.slice.d
-	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/user-.slice.d/* $(1)/usr/lib/systemd/system/user-.slice.d
+	$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/user-.slice.d/* $(1)/usr/lib/systemd/system/user-.slice.d
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/user@.service.d
-	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/user@.service.d/* $(1)/usr/lib/systemd/system/user@.service.d
+	$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/user@.service.d/* $(1)/usr/lib/systemd/system/user@.service.d
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/user@0.service.d
-	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/user@0.service.d/* $(1)/usr/lib/systemd/system/user@0.service.d
-
-	ln -sf /etc/systemd/system/load-kmods.service $(1)/usr/lib/systemd/system/sysinit.target.wants/load-kmods.service
+	$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/user@0.service.d/* $(1)/usr/lib/systemd/system/user@0.service.d
 
 	$(INSTALL_DIR) $(1)/etc/systemd/system/getty.target.wants
 	ln -sf /usr/lib/systemd/system/serial-getty@.service \
@@ -351,43 +349,11 @@ define Package/systemd/install
 	    $(1)/etc/systemd/system/getty.target.wants/getty@tty1.service
 	ln -sf /etc/systemd/system/serial-shell.service $(1)/usr/lib/systemd/system/multi-user.target.wants/serial-shell.service
 
-	# networkd 服務
-	ln -sf /usr/lib/systemd/system/systemd-networkd.service \
-		$(1)/usr/lib/systemd/system/multi-user.target.wants/systemd-networkd.service
-
-	ln -sf /usr/lib/systemd/system/systemd-networkd.socket \
-		$(1)/usr/lib/systemd/system/sockets.target.wants/systemd-networkd.socket
+	ln -sf /etc/systemd/system/load-kmods.service $(1)/usr/lib/systemd/system/sysinit.target.wants/load-kmods.service
 
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/network-online.target.wants
 	ln -sf /usr/lib/systemd/system/network-online.target.wants/systemd-networkd-wait-online.service \
 		$(1)/usr/lib/systemd/system/network-online.target.wants/systemd-networkd-wait-online.service
-
-	# 確保 systemd 其他服務啟動
-	ln -sf /usr/lib/systemd/system/systemd-resolved.service \
-		$(1)/usr/lib/systemd/system/multi-user.target.wants/systemd-resolved.service
-	ln -sf /usr/lib/systemd/system/systemd-timesyncd.service \
-		$(1)/usr/lib/systemd/system/sysinit.target.wants/systemd-timesyncd.service
-	ln -sf /usr/lib/systemd/system/systemd-udevd.service \
-		$(1)/usr/lib/systemd/system/sysinit.target.wants/systemd-udevd.service
-	ln -sf /usr/lib/systemd/system/systemd-udev-trigger.service \
-		$(1)/usr/lib/systemd/system/sysinit.target.wants/systemd-udev-trigger.service
-	ln -sf /usr/lib/systemd/system/systemd-journald.service \
-		$(1)/usr/lib/systemd/system/sockets.target.wants/systemd-journald.service
-	ln -sf /usr/lib/systemd/system/systemd-udevd-control.socket \
-		$(1)/usr/lib/systemd/system/sockets.target.wants/systemd-udevd-control.socket
-	ln -sf /usr/lib/systemd/system/systemd-udevd-kernel.socket \
-		$(1)/usr/lib/systemd/system/sockets.target.wants/systemd-udevd-kernel.socket
-	ln -sf /usr/lib/systemd/system/systemd-tmpfiles-setup.service \
-		$(1)/usr/lib/systemd/system/sysinit.target.wants/systemd-tmpfiles-setup.service
-	ln -sf /usr/lib/systemd/system/systemd-random-seed.service \
-		$(1)/usr/lib/systemd/system/sysinit.target.wants/systemd-random-seed.service
-	ln -sf /usr/lib/systemd/system/systemd-remount-fs.service \
-		$(1)/usr/lib/systemd/system/sysinit.target.wants/systemd-remount-fs.service
-	ln -sf /usr/lib/systemd/system/systemd-fsck-root.service \
-		$(1)/usr/lib/systemd/system/sysinit.target.wants/systemd-fsck-root.service
-	ln -sf /usr/lib/systemd/system/systemd-journal-flush.service \
-		$(1)/usr/lib/systemd/system/sysinit.target.wants/systemd-journal-flush.service
-
 
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system-generators
 	$(INSTALL_BIN) \
@@ -598,10 +564,6 @@ define Build/InstallDev
 	$(CP) $(PKG_INSTALL_DIR)/usr/share/pkgconfig/*.pc $(1)/usr/share/pkgconfig
 	$(INSTALL_DIR) $(1)/usr/lib/pkgconfig
 	$(CP) $(PKG_INSTALL_DIR)/usr/lib/pkgconfig/*.pc $(1)/usr/lib/pkgconfig
-endef
-
-define Package/systemd-resolved/conffiles
-/etc/systemd/resolved.conf
 endef
 
 define Package/systemd-timesyncd/conffiles
