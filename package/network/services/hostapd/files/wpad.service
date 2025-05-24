@@ -1,6 +1,7 @@
 [Unit]
 Description=Wireless AP + Client Daemon (wpad)
-After=network.target
+After=network.target hostapd.service
+Requires=hostapd.service
 
 [Service]
 Type=simple
