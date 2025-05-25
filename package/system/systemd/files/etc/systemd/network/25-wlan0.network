@@ -3,3 +3,5 @@ Name=wlan0
 
 [Network]
 Address=192.168.1.1/24
+DHCPServer=no
+IPForward=yes
