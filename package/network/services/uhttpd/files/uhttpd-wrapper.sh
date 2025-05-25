@@ -1,21 +1,19 @@
 #!/bin/sh
 
-. /lib/functions.sh
-. /etc/diag.sh
+CERT="/etc/uhttpd.crt"
+KEY="/etc/uhttpd.key"
+UHTTPD_BIN="/usr/sbin/uhttpd"
 
-UHTTPD_BIN=/usr/sbin/uhttpd
-PX5G_BIN=/usr/sbin/px5g
-OPENSSL_BIN=/usr/bin/openssl
-CERT=/etc/uhttpd.crt
-KEY=/etc/uhttpd.key
-
-# 自動產生憑證
+# 自動產生 TLS 憑證（僅在首次執行）
 if [ ! -s "$CERT" ] || [ ! -s "$KEY" ]; then
-	[ -x "$PX5G_BIN" ] && $PX5G_BIN selfsigned -der -days 397 -newkey rsa:2048 \
+	echo "[uhttpd] TLS cert/key not found, generating self-signed..."
+	openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 		-keyout "$KEY" -out "$CERT" \
-		-subj "/CN=OpenWrt" \
-		-addext extendedKeyUsage=serverAuth -addext subjectAltName=DNS:OpenWrt
+		-subj "/C=ZZ/ST=Somewhere/L=Unknown/O=OpenWrt/CN=OpenWrt"
 fi
 
-# 執行 uhttpd，支援基本參數，你可加入 uci 解析進一步擴展
-exec $UHTTPD_BIN -f -h /www -r OpenWrt -x /cgi-bin -p 0.0.0.0:80 -s 0.0.0.0:443 -C "$CERT" -K "$KEY"
+# 確保 /www 存在
+[ -d /www ] || mkdir -p /www
+
+# 啟動 uhttpd
+exec $UHTTPD_BIN -f -h /www -r OpenWrt -p 0.0.0.0:80 -s 0.0.0.0:443 -C "$CERT" -K "$KEY"
