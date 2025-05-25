@@ -1,0 +1,14 @@
+[Unit]
+Description=RSSI LED Indicator Service
+After=network.target
+Requires=network.target
+
+[Service]
+Type=forking
+ExecStart=/usr/libexec/rssileds-wrapper.sh start
+ExecStop=/usr/libexec/rssileds-wrapper.sh stop
+PIDFile=/var/run/rssileds-wrapper.pid
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

@@ -54,18 +54,18 @@ endef
 TARGET_LDFLAGS += -lcrypt
 
 define Package/rpcd/install
-	$(INSTALL_DIR) $(1)/etc/init.d
-	$(INSTALL_BIN) ./files/rpcd.init $(1)/etc/init.d/rpcd
-	$(INSTALL_DIR) $(1)/sbin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/rpcd $(1)/sbin/rpcd
-	$(INSTALL_DIR) $(1)/usr/share/rpcd/acl.d
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/unauthenticated.json $(1)/usr/share/rpcd/acl.d/unauthenticated.json
-	$(INSTALL_DIR) $(1)/etc/config
-	$(INSTALL_CONF) ./files/rpcd.config $(1)/etc/config/rpcd
-	$(INSTALL_DIR) $(1)/etc/uci-defaults
-	$(INSTALL_BIN) ./files/50-migrate-rpcd-ubus-sock.sh $(1)/etc/uci-defaults
-endef
+	$(INSTALL_DIR) $(1)/sbin $(1)/etc/config $(1)/usr/share/rpcd/acl.d $(1)/etc/uci-defaults $(1)/etc/systemd/system
 
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/rpcd $(1)/sbin/rpcd
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/unauthenticated.json $(1)/usr/share/rpcd/acl.d/unauthenticated.json
+	$(INSTALL_CONF) ./files/rpcd.config $(1)/etc/config/rpcd
+	$(INSTALL_BIN) ./files/50-migrate-rpcd-ubus-sock.sh $(1)/etc/uci-defaults/
+
+	$(INSTALL_DATA) ./files/rpcd.service $(1)/etc/systemd/system/rpcd.service
+
+	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/sysinit.target.wants
+	ln -sf /etc/systemd/system/rpcd.service $(1)/usr/lib/systemd/system/sysinit.target.wants/rpcd.service
+endef
 
 # 1: plugin name
 # 2: additional dependencies

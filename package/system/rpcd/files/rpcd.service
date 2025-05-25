@@ -1,0 +1,13 @@
+[Unit]
+Description=OpenWrt JSON-RPC Daemon (rpcd)
+After=network.target ubus.socket
+Requires=ubus.socket
+
+[Service]
+Type=simple
+ExecStart=/sbin/rpcd --socket=/var/run/ubus.sock
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

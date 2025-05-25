@@ -8,7 +8,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=ustp
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 
 PKG_SOURCE_URL=$(PROJECT_GIT)/project/ustp.git
 PKG_SOURCE_PROTO:=git
@@ -34,9 +34,11 @@ endef
 TARGET_CFLAGS += -I$(STAGING_DIR)/usr/include
 
 define Package/ustp/install
-	$(INSTALL_DIR) $(1)/sbin $(1)/etc/init.d
+	$(INSTALL_DIR) $(1)/sbin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ipkg-install/sbin/* $(1)/sbin/
-	$(INSTALL_BIN) ./files/ustpd.init $(1)/etc/init.d/ustpd
+
+	$(INSTALL_DIR) $(1)/etc/systemd/system
+	$(INSTALL_CONF) ./files/ustpd.service $(1)/etc/systemd/system/
 endef
 
 $(eval $(call BuildPackage,ustp))

@@ -1,0 +1,11 @@
+[Unit]
+Description=OpenWrt STP/RSTP Daemon (ustpd)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/sbin/ustpd
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

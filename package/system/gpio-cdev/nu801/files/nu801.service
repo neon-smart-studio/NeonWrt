@@ -1,0 +1,13 @@
+[Unit]
+Description=NU801 LED Driver Init
+DefaultDependencies=no
+Before=sysinit.target
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/nu801-wrapper.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=sysinit.target

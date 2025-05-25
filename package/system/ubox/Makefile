@@ -64,12 +64,11 @@ define Package/ubox/install
 endef
 
 define Package/logd/install
-	$(INSTALL_DIR) $(1)/sbin $(1)/usr/libexec/ $(1)/etc/init.d/ $(1)/usr/share/acl.d
-
+	$(INSTALL_DIR) $(1)/sbin $(1)/usr/libexec $(1)/etc/systemd/system $(1)/usr/share/acl.d
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/logd $(1)/sbin/
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/logread $(1)/usr/libexec/logread-ubox
-	$(INSTALL_BIN) ./files/log.init $(1)/etc/init.d/log
-	$(INSTALL_DATA) ./files/logd.json $(1)/usr/share/acl.d
+	$(INSTALL_DATA) ./files/logd.json $(1)/usr/share/acl.d/
+	$(INSTALL_CONF) ./files/logd.service $(1)/etc/systemd/system/
 endef
 
 $(eval $(call BuildPackage,ubox))

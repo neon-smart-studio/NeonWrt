@@ -1,0 +1,14 @@
+[Unit]
+Description=Mount block device volumes
+DefaultDependencies=no
+Before=sysinit.target
+After=local-fs-pre.target
+
+[Service]
+Type=oneshot
+ExecStart=/sbin/block mount
+ExecStop=/sbin/block umount
+RemainAfterExit=true
+
+[Install]
+WantedBy=sysinit.target

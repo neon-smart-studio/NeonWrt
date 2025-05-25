@@ -216,9 +216,9 @@ define Package/apparmor-utils/install
 		$(1)/usr/lib/python$(PYTHON3_VERSION)/site-packages/apparmor/rule
 	$(INSTALL_DATA) $(PKG_INSTALL_DIR)-utils/usr/lib/python$(PYTHON3_VERSION)/site-packages/apparmor-$(PKG_VERSION)-py$(PYTHON3_VERSION).egg-info/* \
 		$(1)/usr/lib/python$(PYTHON3_VERSION)/site-packages/apparmor-$(PKG_VERSION)-py$(PYTHON3_VERSION).egg-info/
-	$(INSTALL_DIR) $(1)/etc/init.d $(1)/lib/functions
+	$(INSTALL_DIR) $(1)/lib/functions $(1)/etc/systemd/system
 	$(INSTALL_BIN) ./files/apparmor.sh $(1)/lib/functions/
-	$(INSTALL_BIN) ./files/apparmor.init $(1)/etc/init.d/apparmor
+	$(INSTALL_CONF) ./files/apparmor.service $(1)/etc/systemd/system/
 endef
 
 define Package/apparmor-profiles/install

@@ -33,8 +33,15 @@ endef
 define Package/nu801/install
 	$(INSTALL_DIR) $(1)/usr/sbin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/nu801 $(1)/usr/sbin/
-	$(INSTALL_DIR) $(1)/etc/init.d
-	$(INSTALL_BIN) ./files/nu801.init $(1)/etc/init.d/nu801
+
+	$(INSTALL_DIR) $(1)/usr/libexec
+	$(INSTALL_BIN) ./files/nu801-wrapper.sh $(1)/usr/libexec/
+
+	$(INSTALL_DIR) $(1)/etc/systemd/system
+	$(INSTALL_CONF) ./files/nu801.service $(1)/etc/systemd/system/
+
+	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/sysinit.target.wants
+	ln -sf /etc/systemd/system/nu801.service $(1)/usr/lib/systemd/system/sysinit.target.wants/nu801.service
 endef
 
 $(eval $(call BuildPackage,nu801))

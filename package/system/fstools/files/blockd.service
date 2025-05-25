@@ -1,0 +1,13 @@
+[Unit]
+Description=Block Device Auto Mount Daemon
+After=local-fs.target
+Requires=local-fs.target
+
+[Service]
+Type=simple
+ExecStart=/sbin/blockd
+Restart=on-failure
+WatchdogSec=0
+
+[Install]
+WantedBy=multi-user.target

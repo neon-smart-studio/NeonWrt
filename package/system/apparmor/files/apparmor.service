@@ -1,0 +1,15 @@
+[Unit]
+Description=AppArmor userspace loader
+DefaultDependencies=no
+Before=sysinit.target
+After=local-fs.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+ExecStart=/lib/functions/apparmor.sh start
+ExecStop=/lib/functions/apparmor.sh stop
+ExecReload=/lib/functions/apparmor.sh reload
+
+[Install]
+WantedBy=sysinit.target

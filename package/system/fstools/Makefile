@@ -108,9 +108,8 @@ define Package/snapshot-tool/install
 endef
 
 define Package/block-mount/install
-	$(INSTALL_DIR) $(1)/sbin $(1)/lib $(1)/usr/sbin $(1)/etc/hotplug.d/block $(1)/etc/init.d/ $(1)/etc/uci-defaults/
+	$(INSTALL_DIR) $(1)/sbin $(1)/lib $(1)/usr/sbin $(1)/etc/uci-defaults $(1)/etc/hotplug.d/block $(1)/etc/systemd/system
 
-	$(INSTALL_BIN) ./files/fstab.init $(1)/etc/init.d/fstab
 	$(INSTALL_CONF) ./files/fstab.default $(1)/etc/uci-defaults/10-fstab
 	$(INSTALL_CONF) ./files/mount.hotplug $(1)/etc/hotplug.d/block/10-mount
 	$(INSTALL_CONF) ./files/media-change.hotplug  $(1)/etc/hotplug.d/block/00-media-change
@@ -120,12 +119,13 @@ define Package/block-mount/install
 	$(LN) ../../sbin/block $(1)/usr/sbin/swapon
 	$(LN) ../../sbin/block $(1)/usr/sbin/swapoff
 
+	$(INSTALL_CONF) ./files/block-mount.service $(1)/etc/systemd/system/
 endef
 
 define Package/blockd/install
-	$(INSTALL_DIR) $(1)/sbin $(1)/etc/init.d/
+	$(INSTALL_DIR) $(1)/sbin $(1)/etc/systemd/system
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/blockd $(1)/sbin/
-	$(INSTALL_BIN) ./files/blockd.init $(1)/etc/init.d/blockd
+	$(INSTALL_CONF) ./files/blockd.service $(1)/etc/systemd/system/
 endef
 
 define Build/InstallDev

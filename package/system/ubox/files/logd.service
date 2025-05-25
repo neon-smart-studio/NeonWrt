@@ -1,0 +1,12 @@
+[Unit]
+Description=OpenWrt system log daemon (logd)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/sbin/logd -S 256
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
