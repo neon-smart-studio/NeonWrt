@@ -87,13 +87,17 @@ endef
 ifneq ($(CONFIG_USE_GLIBC),)
   TARGET_CFLAGS += -D_DEFAULT_SOURCE
 endif
-
 define Package/uhttpd/install
-	$(INSTALL_DIR) $(1)/etc/init.d $(1)/etc/config $(1)/usr/sbin
-	$(INSTALL_BIN) ./files/uhttpd.init $(1)/etc/init.d/uhttpd
-	$(INSTALL_CONF) ./files/uhttpd.config $(1)/etc/config/uhttpd
-	$(VERSION_SED_SCRIPT) $(1)/etc/config/uhttpd
+	$(INSTALL_DIR) $(1)/etc/config $(1)/usr/sbin $(1)/usr/libexec $(1)/etc/systemd/system
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/uhttpd $(1)/usr/sbin/uhttpd
+	$(INSTALL_CONF) ./files/uhttpd.config $(1)/etc/config/uhttpd
+	$(INSTALL_BIN) ./files/uhttpd-wrapper.sh $(1)/usr/libexec/uhttpd-wrapper.sh
+	chmod +x $(1)/usr/libexec/uhttpd-wrapper.sh
+
+	$(INSTALL_CONF) ./files/uhttpd.service $(1)/etc/systemd/system/uhttpd.service
+
+	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/multi-user.target.wants
+	ln -sf /etc/systemd/system/uhttpd.service $(1)/usr/lib/systemd/system/multi-user.target.wants/uhttpd.service
 endef
 
 define Package/uhttpd-mod-lua/install

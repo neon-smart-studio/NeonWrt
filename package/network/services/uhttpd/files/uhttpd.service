@@ -1,0 +1,12 @@
+[Unit]
+Description=uHTTPd Web Server
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/libexec/uhttpd-wrapper.sh
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
