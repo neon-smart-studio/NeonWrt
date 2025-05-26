@@ -42,7 +42,13 @@ endef
 
 define Package/zram-swap/install
 	$(INSTALL_DIR) $(1)/etc/init.d
-	$(INSTALL_BIN) ./files/zram.init $(1)/etc/init.d/zram
+	$(INSTALL_BIN) ./files/zram.sh $(1)/etc/init.d/zram
+
+	$(INSTALL_DIR) $(1)/etc/systemd/system
+	$(INSTALL_DATA) ./files/zram-swap.service $(1)/etc/systemd/system/zram-swap.service
+
+	$(INSTALL_DIR) $(1)/etc/systemd/system/multi-user.target.wants
+	ln -sf /etc/systemd/system/zram-swap.service $(1)/etc/systemd/system/multi-user.target.wants/zram-swap.service
 endef
 
 $(eval $(call BuildPackage,zram-swap))

@@ -1,0 +1,14 @@
+[Unit]
+Description=Load /etc/urandom.seed into kernel entropy pool
+DefaultDependencies=no
+Before=sysinit.target
+After=local-fs.target
+
+[Service]
+Type=oneshot
+Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+ExecStart=/sbin/urandom_seed
+RemainAfterExit=true
+
+[Install]
+WantedBy=sysinit.target

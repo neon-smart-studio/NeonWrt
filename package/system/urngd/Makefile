@@ -37,10 +37,14 @@ define Package/urngd/description
 endef
 
 define Package/urngd/install
-	$(INSTALL_DIR) $(1)/etc/init.d
-	$(INSTALL_BIN) ./files/$(PKG_NAME).init $(1)/etc/init.d/$(PKG_NAME)
 	$(INSTALL_DIR) $(1)/sbin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/$(PKG_NAME) $(1)/sbin/$(PKG_NAME)
+
+	$(INSTALL_DIR) $(1)/etc/systemd/system
+	$(INSTALL_DATA) ./files/urngd.service $(1)/etc/systemd/system/urngd.service
+
+	$(INSTALL_DIR) $(1)/etc/systemd/system/sysinit.target.wants
+	ln -sf /etc/systemd/system/urngd.service $(1)/etc/systemd/system/sysinit.target.wants/urngd.service
 endef
 
 $(eval $(call BuildPackage,urngd))

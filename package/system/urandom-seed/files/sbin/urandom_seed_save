@@ -1,0 +1,25 @@
+#!/bin/sh
+set -e
+
+SEED_PATH="/etc/urandom.seed"
+UCI_SEED="$(uci -q get system.@system[0].urandom_seed || true)"
+
+# 優先使用 UCI 指定路徑
+[ -n "$UCI_SEED" ] && [ "${UCI_SEED:0:1}" = "/" ] && SEED_PATH="$UCI_SEED"
+
+save_seed() {
+    local seed_file="$1"
+    [ -z "$seed_file" ] && return 1
+
+    # 建立暫存檔
+    umask 077
+    TMPFILE="${seed_file}.tmp"
+    getrandom 512 > "$TMPFILE"
+    chown root:root "$TMPFILE"
+    chmod 600 "$TMPFILE"
+    mv "$TMPFILE" "$seed_file"
+
+    echo "urandom-seed: Seed saved to $seed_file" > /dev/kmsg
+}
+
+save_seed "$SEED_PATH"

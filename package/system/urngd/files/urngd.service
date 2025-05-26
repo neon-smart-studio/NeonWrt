@@ -1,0 +1,13 @@
+[Unit]
+Description=Micro entropy daemon using timing jitter
+DefaultDependencies=no
+Before=sysinit.target
+After=systemd-udevd.service
+
+[Service]
+Type=simple
+ExecStart=/sbin/urngd
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

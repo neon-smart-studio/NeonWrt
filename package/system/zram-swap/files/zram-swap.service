@@ -1,0 +1,15 @@
+[Unit]
+Description=ZRAM Swap Initializer
+DefaultDependencies=no
+Before=swap.target
+After=local-fs.target
+
+[Service]
+Type=oneshot
+Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+ExecStart=/etc/init.d/zram start
+ExecStop=/etc/init.d/zram stop
+RemainAfterExit=true
+
+[Install]
+WantedBy=multi-user.target

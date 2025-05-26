@@ -1,0 +1,12 @@
+[Unit]
+Description=Save kernel entropy to /etc/urandom.seed
+DefaultDependencies=no
+Before=shutdown.target
+RequiresMountsFor=/etc
+
+[Service]
+Type=oneshot
+ExecStart=/sbin/urandom_seed_save
+
+[Install]
+WantedBy=shutdown.target
