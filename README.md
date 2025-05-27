@@ -1,3 +1,6 @@
+此專案已經不再維護轉而維護NeonOS
+僅demo在Wrt系統上跑systemd
+
 NeonWrt – 基於 Systemd 的 OpenWrt 發行版
 -------------------------------------------------------------
 * Systemd core + full boot flow support
