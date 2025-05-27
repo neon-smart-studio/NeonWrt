@@ -1,7 +1,6 @@
 #!/bin/sh
 
 . /lib/functions.sh
-. /lib/functions/network.sh
 
 CONF_FILE="/var/run/hostapd.conf"
 mkdir -p /var/run
@@ -83,5 +82,4 @@ rsn_pairwise=CCMP
 EOF
 fi
 
-chown network:network "$CONF_FILE"
 chmod 600 "$CONF_FILE"
