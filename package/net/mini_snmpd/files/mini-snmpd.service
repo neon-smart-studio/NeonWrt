@@ -1,0 +1,13 @@
+[Unit]
+Description=Mini SNMP daemon
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/sbin/mini-snmpd -f
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

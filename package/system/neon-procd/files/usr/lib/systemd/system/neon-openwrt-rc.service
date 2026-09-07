@@ -1,0 +1,16 @@
+[Unit]
+Description=NeonWrt OpenWrt rc.d compatibility boot
+DefaultDependencies=no
+After=local-fs.target systemd-tmpfiles-setup.service
+Before=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/neon-rc boot
+ExecStop=/usr/libexec/neon-rc shutdown
+RemainAfterExit=yes
+TimeoutStartSec=0
+TimeoutStopSec=90s
+
+[Install]
+WantedBy=multi-user.target

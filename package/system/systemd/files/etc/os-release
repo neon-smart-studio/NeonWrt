@@ -1,0 +1,7 @@
+NAME="NeonWrt"
+ID="neonwrt"
+VERSION=""
+VERSION_ID=""
+PRETTY_NAME="NeonWrt"
+ANSI_COLOR="1;34"
+HOME_URL="https://openwrt.org/"

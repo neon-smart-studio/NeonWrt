@@ -1,0 +1,27 @@
+#!/bin/sh
+# Run OpenWrt rc.d compatibility scripts under systemd PID 1.
+set -u
+
+log() { echo "neon-rc: $*"; }
+
+case "${1:-}" in
+	boot)
+		for s in /etc/rc.d/S*; do
+			[ -e "$s" ] || continue
+			log "start $(basename "$s")"
+			"$s" start || log "warning: $s start failed ($?)"
+		done
+		;;
+	shutdown)
+		# Reverse lexical order approximates OpenWrt shutdown ordering.
+		for s in $(ls -1r /etc/rc.d/K* 2>/dev/null); do
+			[ -e "$s" ] || continue
+			log "stop $(basename "$s")"
+			"$s" stop || log "warning: $s stop failed ($?)"
+		done
+		;;
+	*)
+		echo "usage: $0 boot|shutdown" >&2
+		exit 2
+		;;
+esac

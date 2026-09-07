@@ -1,0 +1,97 @@
+--- a/units/console-getty.service.in
++++ b/units/console-getty.service.in
+@@ -10,8 +10,8 @@
+ [Unit]
+ Description=Console Getty
+ Documentation=man:agetty(8) man:systemd-getty-generator(8)
+-After=systemd-user-sessions.service plymouth-quit-wait.service getty-pre.target
++After=local-fs.target systemd-journald.socket
+ {% if HAVE_SYSV_COMPAT %}
+ After=rc-local.service
+ {% endif %}
+ Before=getty.target
+@@ -22,7 +22,7 @@
+ [Service]
+ # The '-o' option value tells agetty to replace 'login' arguments with an option to preserve environment (-p),
+ # followed by '--' for safety, and then the entered username.
+-ExecStart=-/sbin/agetty -o '-p -- \\u' --noclear --keep-baud - 115200,38400,9600 $TERM
++ExecStart=/usr/sbin/agetty --noclear --keep-baud --autologin root console 115200,57600,38400,9600 linux
+ Type=idle
+ Restart=always
+ UtmpIdentifier=cons
+--- a/units/container-getty@.service.in
++++ b/units/container-getty@.service.in
+@@ -10,11 +10,11 @@
+ [Unit]
+ Description=Container Getty on /dev/pts/%I
+ Documentation=man:agetty(8) man:systemd-getty-generator(8)
+ Documentation=man:machinectl(1)
+-After=systemd-user-sessions.service plymouth-quit-wait.service getty-pre.target
++After=local-fs.target systemd-journald.socket
+ {% if HAVE_SYSV_COMPAT %}
+ After=rc-local.service
+ {% endif %}
+ Before=getty.target
+ IgnoreOnIsolate=yes
+ ConditionPathExists=/dev/pts/%I
+@@ -27,7 +27,7 @@
+ [Service]
+ # The '-o' option value tells agetty to replace 'login' arguments with an option to preserve environment (-p),
+ # followed by '--' for safety, and then the entered username.
+-ExecStart=-/sbin/agetty -o '-p -- \\u' --noclear - $TERM
++ExecStart=/usr/sbin/agetty --noclear --keep-baud --autologin root pts/%I 115200,57600,38400,9600 linux
+ Type=idle
+ Restart=always
+ RestartSec=0
+--- a/units/getty@.service.in
++++ b/units/getty@.service.in
+@@ -10,8 +10,8 @@
+ [Unit]
+ Description=Getty on %I
+ Documentation=man:agetty(8) man:systemd-getty-generator(8)
+ Documentation=https://0pointer.de/blog/projects/serial-console.html
+-After=systemd-user-sessions.service plymouth-quit-wait.service getty-pre.target
++After=local-fs.target systemd-journald.socket
+ {% if HAVE_SYSV_COMPAT %}
+ After=rc-local.service
+ {% endif %}
+@@ -36,9 +36,9 @@
+ [Service]
+ # the VT is cleared by TTYVTDisallocate
+ # The '-o' option value tells agetty to replace 'login' arguments with an
+ # option to preserve environment (-p), followed by '--' for safety, and then
+ # the entered username.
+-ExecStart=-/sbin/agetty -o '-p -- \\u' --noclear - $TERM
++ExecStart=/usr/sbin/agetty --noclear --autologin root %I linux
+ Type=idle
+ Restart=always
+ RestartSec=0
+--- a/units/serial-getty@.service.in
++++ b/units/serial-getty@.service.in
+@@ -10,9 +10,9 @@ 
+ [Unit]
+ Description=Serial Getty on %I
+ Documentation=man:agetty(8) man:systemd-getty-generator(8)
+ Documentation=https://0pointer.de/blog/projects/serial-console.html
+ BindsTo=dev-%i.device
+-After=dev-%i.device systemd-user-sessions.service plymouth-quit-wait.service getty-pre.target
++After=local-fs.target systemd-journald.socket
+ {% if HAVE_SYSV_COMPAT %}
+ After=rc-local.service
+ {% endif %}
+@@ -32,8 +32,8 @@ 
+ [Service]
+ # The '-o' option value tells agetty to replace 'login' arguments with an
+ # option to preserve environment (-p), followed by '--' for safety, and then
+ # the entered username.
+-ExecStart=-/sbin/agetty -o '-p -- \\u' --keep-baud 115200,57600,38400,9600 - $TERM
++ExecStart=/usr/sbin/agetty --autologin root --keep-baud 115200,57600,38400,9600 %I linux
+ Type=idle
+ Restart=always
+ UtmpIdentifier=%I
+--- a/units/serial-getty@.service.in
++++ b/units/serial-getty@.service.in
+@@ -60,2 +60,3 @@
+ [Install]
+ WantedBy=getty.target
++DefaultInstance=ttyAMA0

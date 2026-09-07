@@ -1,0 +1,13 @@
+[Unit]
+Description=Load kernel modules from /etc/modules.d
+After=basic.target
+Wants=network-pre.target
+Before=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'for f in /etc/modules.d/*; do while read -r mod; do echo "Loading $mod..."; /sbin/modprobe "$mod" || echo "Failed $mod"; done < "$f"; done'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

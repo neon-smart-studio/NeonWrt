@@ -1,0 +1,23 @@
+#!/bin/sh
+
+# 設定環境變數
+export LD_LIBRARY_PATH=/usr/lib:/lib
+
+# 初始化 OverlayFS
+mkdir -p /overlay/upper /overlay/work
+mkdir -p /sysroot
+
+# 掛載 OverlayFS
+mount -t overlay overlay -o lowerdir=/,upperdir=/overlay/upper,workdir=/overlay/work /sysroot
+
+# 確保必要目錄存在
+mkdir -p /sys /proc /run /dev
+
+# 掛載基本檔案系統
+mount -t tmpfs tmpfs /run
+mount -t devtmpfs devtmpfs /dev
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys
+
+# 切換根檔案系統
+exec /usr/bin/systemctl switch-root /sysroot /init
