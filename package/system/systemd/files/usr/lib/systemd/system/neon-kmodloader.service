@@ -1,0 +1,13 @@
+[Unit]
+Description=Load OpenWrt kernel modules
+DefaultDependencies=no
+After=systemd-udev-trigger.service
+Before=network-pre.target
+
+[Service]
+Type=oneshot
+ExecStart=/sbin/kmodloader
+RemainAfterExit=yes
+
+[Install]
+WantedBy=sysinit.target
