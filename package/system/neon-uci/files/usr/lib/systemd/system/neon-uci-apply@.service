@@ -1,0 +1,7 @@
+[Unit]
+Description=Apply NeonWrt UCI translators for %I
+After=neon-uci.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/neon-uci --apply %I

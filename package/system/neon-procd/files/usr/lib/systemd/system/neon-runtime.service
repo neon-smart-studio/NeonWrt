@@ -1,0 +1,14 @@
+# neon-runtime.service
+[Unit]
+Description=Prepare NeonWrt runtime directories
+After=tmp.mount neon-root-rw.service
+Before=ubusd.service neon-procd-ubus.service neon-openwrt-rc.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/mkdir -p /tmp/run /tmp/lock /tmp/log /tmp/log/audit /tmp/lib /tmp/lib/systemd /tmp/cache /tmp/spool /tmp/etc /tmp/etc/ssl /tmp/resolv.conf.d
+ExecStart=/bin/touch /tmp/resolv.conf.d/resolv.conf.auto
+RemainAfterExit=yes
+
+[Install]
+WantedBy=sysinit.target

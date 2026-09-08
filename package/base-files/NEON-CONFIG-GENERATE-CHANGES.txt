@@ -1,0 +1,18 @@
+NeonWrt base-files changes for neon-uci integration
+===================================================
+
+1. Added explicit +uci runtime dependency to base-files.
+2. Added /usr/libexec/neon-config-generate.
+3. Added/enabled neon-config-generate.service in sysinit.target.
+4. Service generates board.json/config files before netifd and neon-uci.
+5. Added defensive /etc/config/system fallback creation.
+6. Initial hostname is applied without hostname(1) or D-Bus.
+7. Fixed legacy preinit 82_config_generate so config_generate always runs.
+8. Changed generated default hostname from OpenWrt to NeonWrt.
+9. Updated NeonWrt systemd notes to match current /var and /sbin/init policy.
+
+V2 boot-order hardening:
+- neon-config-generate.service no longer has a silent ConditionPathExists skip.
+- The sysinit.target wants symlink is recreated in Package/base-files/install.
+- neon-uci.service and neon-openwrt-rc.service receive Requires=/After= drop-ins.
+- This guarantees /etc/config/system exists before UCI translation or OpenWrt rc startup.

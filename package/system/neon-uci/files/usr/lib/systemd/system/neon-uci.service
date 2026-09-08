@@ -1,0 +1,25 @@
+[Unit]
+Description=NeonWrt UCI Translation Service
+Documentation=file:/usr/share/doc/neon-uci/README.md
+After=local-fs.target
+Before=network-pre.target
+Wants=network-pre.target
+
+[Service]
+Type=simple
+ExecStart=/usr/sbin/neon-uci
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=1s
+
+# The translators intentionally need to write selected /etc and /run paths
+# and to call systemctl. Harden without removing those required privileges.
+NoNewPrivileges=yes
+PrivateTmp=no
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+
+[Install]
+WantedBy=multi-user.target

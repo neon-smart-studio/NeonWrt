@@ -1,0 +1,7 @@
+config journald 'journald'
+	option storage 'volatile'
+	option compress '1'
+	option runtime_max_use '32M'
+	option rate_limit_interval_sec '30s'
+	option rate_limit_burst '10000'
+	option forward_to_console '0'

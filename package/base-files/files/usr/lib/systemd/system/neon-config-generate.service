@@ -1,0 +1,22 @@
+[Unit]
+Description=Generate NeonWrt base UCI configuration
+Documentation=file:/usr/share/doc/neonwrt/NEONWRT-SYSTEMD-NOTES.txt
+DefaultDependencies=no
+Requires=neon-root-rw.service
+After=local-fs.target neon-root-rw.service systemd-tmpfiles-setup.service
+Before=network-pre.target network.target neon-uci.service neon-openwrt-rc.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/neon-config-generate
+RemainAfterExit=yes
+
+# /etc/config and /etc/hostname are intentionally written by this service.
+PrivateTmp=no
+ProtectHome=yes
+ProtectKernelTunables=no
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+
+[Install]
+WantedBy=sysinit.target

@@ -1,0 +1,20 @@
+#!/bin/sh
+set -eu
+. /usr/libexec/neon-uci/common.sh
+
+[ "${1:-}" = "apply" ] || exit 2
+
+hostname_value="$(uci_get 'system.@system[0].hostname' 'NeonWrt')"
+
+case "$hostname_value" in
+    ''|*[!A-Za-z0-9.-]*|.*|-*|*-) 
+        log "invalid hostname '$hostname_value'"
+        exit 1
+        ;;
+esac
+
+printf '%s\n' "$hostname_value" | atomic_write /etc/hostname 0644
+
+# Update the running kernel hostname without depending on BusyBox hostname
+# or D-Bus/systemd-hostnamed.  /etc/hostname remains the persistent source.
+"$NEON_UCI_BIN" set-hostname "$hostname_value"

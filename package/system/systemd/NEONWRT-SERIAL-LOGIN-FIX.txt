@@ -1,0 +1,34 @@
+NeonWrt systemd serial console fix
+==================================
+
+Goal
+----
+- tty1 remains enabled and autologins root.
+- ttyAMA0 is enabled by default and autologins root at 115200 baud.
+- serial-getty@ttyAMA0.service must not wait for dev-ttyAMA0.device.
+- obsolete serial-shell.service is not used.
+
+Key changes
+-----------
+1. serial-getty@.service no longer BindsTo/After dev-%i.device.
+   It uses ConditionPathExists=/dev/%I instead.
+2. ttyAMA0 has an instance drop-in that also clears BindsTo=/After= as a
+   second layer of protection, then starts agetty with --autologin root.
+3. Makefile enables getty@tty1 and serial-getty@ttyAMA0 in
+   /usr/lib/systemd/system/getty.target.wants after custom files are copied.
+4. Full udev rules/hwdb are installed from PKG_INSTALL_DIR.
+5. Old serial-shell.service links/files are removed from the final package.
+
+Expected runtime checks
+-----------------------
+systemctl is-enabled serial-getty@ttyAMA0.service
+systemctl status serial-getty@ttyAMA0.service
+systemctl cat serial-getty@ttyAMA0.service
+systemctl show serial-getty@ttyAMA0.service -p BindsTo -p After
+
+Expected:
+- enabled
+- Active: active (running)
+- BindsTo= does not contain dev-ttyAMA0.device
+- After= does not contain dev-ttyAMA0.device
+- UART reaches root@NeonWrt without a 90-second device job.
