@@ -111,12 +111,57 @@ generate_network() {
 	}
 
 	[ -n "$ports" -a -z "$bridge" ] && {
+		local bridge_mac=""
+
+		#
+		# NeonWrt:
+		# Give br-lan its own stable locally-administered MAC instead
+		# of inheriting wlan0's MAC.
+		#
+		if [ "$1" = "lan" ]; then
+			for port in $ports; do
+				[ -r "/sys/class/net/$port/address" ] || continue
+
+				port_mac="$(cat "/sys/class/net/$port/address" 2>/dev/null)"
+
+				case "$port_mac" in
+					??:??:??:??:??:??)
+						first="${port_mac%%:*}"
+						rest="${port_mac#*:}"
+
+						#
+						# Toggle bit 2 while keeping:
+						# bit0 = 0 (unicast)
+						# bit1 = 1 (locally administered)
+						#
+						first_dec=$((0x$first))
+						first_dec=$(( (first_dec & 252) | 2 ))
+						first_dec=$(( first_dec ^ 4 ))
+
+						bridge_mac="$(printf '%02x:%s' \
+							"$first_dec" "$rest")"
+						break
+					;;
+				esac
+			done
+		fi
+
 		uci -q batch <<-EOF
 			add network device
 			set network.@device[-1].name='br-$1'
 			set network.@device[-1].type='bridge'
 		EOF
-		for port in $ports; do uci add_list network.@device[-1].ports="$port"; done
+
+		#
+		# Apply independent MAC to br-lan
+		#
+		[ -n "$bridge_mac" ] && \
+			uci set network.@device[-1].macaddr="$bridge_mac"
+
+		for port in $ports; do
+			uci add_list network.@device[-1].ports="$port"
+		done
+
 		[ -n "$macaddr" ] && {
 			for port in $ports; do
 				uci -q batch <<-EOF
@@ -126,6 +171,7 @@ generate_network() {
 				EOF
 			done
 		}
+
 		device=br-$1
 		type=
 		macaddr=""
