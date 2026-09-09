@@ -107,7 +107,7 @@ menu "Target Images"
 
 	menuconfig TARGET_ROOTFS_EXT4FS
 		bool "ext4"
-		default y if USES_EXT4
+		default y
 		help
 		  Build an ext4 root filesystem.
 
@@ -162,9 +162,9 @@ menu "Target Images"
 		help
 		  Build a JFFS2 root filesystem for NAND flash.
 
-	menuconfig TARGET_ROOTFS_SQUASHFS
-		bool "squashfs"
-		default y if USES_SQUASHFS
+	config TARGET_ROOTFS_SQUASHFS
+		bool
+		default n
 		help
 		  Build a squashfs root filesystem.
 
