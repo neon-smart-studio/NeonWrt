@@ -1,0 +1,6 @@
+--- a/xinetd/sconf.c
++++ b/xinetd/sconf.c
+@@ -19,1 +19,2 @@
+ #include "xmdns.h"
++#include <inttypes.h>
+

@@ -1,0 +1,10 @@
+--- a/src/apinger.c
++++ b/src/apinger.c
+@@ -20,6 +20,7 @@
+ #include "apinger.h"
+
+ #include <stdio.h>
++#include <inttypes.h>
+ #ifdef HAVE_STDLIB_H
+ # include <stdlib.h>
+ #endif

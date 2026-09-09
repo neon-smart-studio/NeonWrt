@@ -27,7 +27,7 @@ define Package/xfrpc
   SUBMENU:=Web Servers/Proxies
   SECTION:=net
   CATEGORY:=Network
-  DEPENDS:=+zlib +libjson-c +libevent2 +libevent2-openssl
+  DEPENDS:=+zlib +libjson-c +libevent2 +libevent2-openssl +libcrypt-compat
   TITLE:= C language fast reverse proxy client
   URL:=https://github.com/liudf0716/xfrpc
 endef

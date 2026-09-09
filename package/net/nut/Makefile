@@ -122,7 +122,7 @@ endef
 define Package/nut-server
 	$(call Package/nut/Default)
 	TITLE+= (server)
-	DEPENDS:=nut +nut-common
+	DEPENDS:=nut +nut-common +libsystemd
 	USERID:=nut=113:nut=113
 endef
 
@@ -145,7 +145,7 @@ endef
 define Package/nut-upsmon
   $(call Package/nut/Default)
 	TITLE+= (monitor)
-	DEPENDS:=nut +nut-common
+	DEPENDS:=nut +nut-common +libsystemd
 	USERID:=nutmon=114:nutmon=114
 endef
 

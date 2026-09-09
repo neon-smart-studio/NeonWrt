@@ -1,0 +1,12 @@
+--- a/node_build/dependencies/libuv/build/gyp/pylib/gyp/common.py
++++ b/node_build/dependencies/libuv/build/gyp/pylib/gyp/common.py
+@@ -7,7 +7,7 @@
+ try:
+   # Python 3.10
+   from six.moves import collections_abc as collections
+ except ImportError:
+-  import collections
++  import collections.abc as collections
+ import errno
+ import filecmp
+ import os

@@ -2,7 +2,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=antiblock
 PKG_VERSION:=2.1.2
-PKG_RELEASE:=2
+PKG_RELEASE:=3
 
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=https://github.com/karen07/antiblock
@@ -15,6 +15,10 @@ PKG_LICENSE_FILES:=LICENSE
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
+
+# GCC/glibc marks ftruncate() as warn_unused_result.
+# Upstream antiblock 2.1.2 ignores its return value while compiling with -Werror.
+TARGET_CFLAGS += -Wno-error=unused-result
 
 define Package/antiblock
   SECTION:=net

@@ -1,0 +1,6 @@
+--- a/xinetd/sensor.c
++++ b/xinetd/sensor.c
+@@ -20,1 +20,2 @@
+ #include "xtimer.h"
++#include <inttypes.h>
+

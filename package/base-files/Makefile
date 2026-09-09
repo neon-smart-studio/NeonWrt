@@ -42,7 +42,9 @@ define Package/base-files
   CATEGORY:=Base system
   DEPENDS:= \
 	+systemd +uci +neon-procd +neon-uci \
-	+netifd +libc +jsonfilter +SIGNED_PACKAGES:usign +SIGNED_PACKAGES:openwrt-keyring \
+	+netifd +libubox +libblobmsg-json +jshn \
+	+libc +jsonfilter \
+	+SIGNED_PACKAGES:usign +SIGNED_PACKAGES:openwrt-keyring \
 	+NAND_SUPPORT:ubi-utils +fstools +fwtool \
 	+SELINUX:busybox-selinux +!SELINUX:busybox
   TITLE:=Base filesystem for NeonWrt

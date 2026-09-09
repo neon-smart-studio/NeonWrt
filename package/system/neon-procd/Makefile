@@ -9,12 +9,12 @@ PKG_MAINTAINER:=NeonWrt
 
 include $(INCLUDE_DIR)/package.mk
 
- define Package/neon-procd
+define Package/neon-procd
   SECTION:=base
   CATEGORY:=Base system
   TITLE:=OpenWrt procd compatibility layer for systemd
-  DEPENDS:=+systemd +libjson-c +libubox +ubus
- endef
+  DEPENDS:=+systemd +libjson-c +libubox +libblobmsg-json +jshn +ubus
+endef
 
  define Package/neon-procd/description
   Compatibility layer that lets OpenWrt USE_PROCD init scripts launch and

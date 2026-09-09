@@ -34,6 +34,7 @@ define Package/https-dns-proxy
 		+ca-bundle \
 		+jsonfilter \
 		+resolveip \
+		+libsystemd \
 		+!BUSYBOX_DEFAULT_GREP:grep \
 		+!BUSYBOX_DEFAULT_SED:sed
 	CONFLICTS:=https_dns_proxy
