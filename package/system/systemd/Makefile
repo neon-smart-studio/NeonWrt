@@ -121,7 +121,7 @@ define Package/systemd
   TITLE:=Systemd init system
   DEPENDS:=+libsystemd +libapparmor +libc +libcap +libselinux +libkmod +libgcrypt +libseccomp +libarchive +liblz4 \
 	+libacl +libpam +libxkbcommon +libbpf +libmicrohttpd +libcurl +libidn +libidn2 +liblzma +libzstd +libxkbcommon \
-  	+valgrind +auditd +p11-kit +bzip2 +block-mount +fstools +mount-utils +fdisk +lsblk +blkid +logger +agetty +cryptsetup +gnutls-utils +openssl-util
+  	+valgrind +auditd +p11-kit +bzip2 +block-mount +fstools +mount-utils +fdisk +lsblk +blkid +logger +agetty +cryptsetup +gnutls-utils +openssl-util +kbd-loadkeys
 endef
 
 define Package/systemd/description
