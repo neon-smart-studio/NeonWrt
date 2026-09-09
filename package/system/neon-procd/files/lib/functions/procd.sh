@@ -9,6 +9,36 @@ _PROCD_SERVICE=
 _PROCD_INSTANCE_SEQ=0
 _PROCD_TRIGGER_OPEN=0
 
+procd_lock() {
+	local basescript service_name lockfile
+	basescript="$(readlink "$initscript" 2>/dev/null)"
+	service_name="$(basename "${basescript:-$initscript}")"
+	lockfile="$IPKG_INSTROOT/var/lock/procd_${service_name}.lock"
+	mkdir -p "$(dirname "$lockfile")" 2>/dev/null
+	if command -v flock >/dev/null 2>&1; then
+		exec 1000>"$lockfile"
+		flock 1000
+	fi
+}
+
+_procd_ubus_call() {
+	local cmd="$1" rc
+	[ -n "$PROCD_DEBUG" ] && json_dump >&2
+	if ubus -S list service >/dev/null 2>&1; then
+		ubus call service "$cmd" "$(json_dump)"
+		rc=$?
+	else
+		case "$cmd" in
+			set|add) json_dump | /usr/sbin/neon-procd set ;;
+			delete) return 1 ;;
+			list) /usr/sbin/neon-procd status ;;
+			*) return 1 ;;
+		esac
+		rc=$?
+	fi
+	return $rc
+}
+
 _procd_call() {
 	local old_cb
 	json_set_namespace procd old_cb
@@ -36,8 +66,10 @@ _procd_open_service() {
 _procd_close_service() {
 	json_close_object
 
-	# Keep init scripts that declare triggers working. v0.1 records trigger data
-	# but does not yet install an ubus->systemd trigger bridge.
+	# Preserve OpenWrt trigger declarations in the service registry.
+	# neon-procd-ubus subscribes to ubus events and forwards matching events to
+	# neon-procd, which evaluates these records and executes the original
+	# run_script action (normally /etc/init.d/<service> reload).
 	if type service_triggers >/dev/null 2>&1; then
 		_procd_open_trigger
 		service_triggers
@@ -151,8 +183,9 @@ _procd_status() {
 	/usr/sbin/neon-procd status "$1" "$2"
 }
 
-# Trigger JSON is accepted to preserve API compatibility. A later neon-ubus-trigger
-# daemon can consume these records and call systemctl reload/restart.
+# Trigger JSON is stored with the service definition. neon-procd-ubus bridges
+# real ubus events to neon-procd's trigger evaluator, preserving the original
+# OpenWrt run_script reload/restart semantics.
 _procd_open_trigger() {
 	[ "$_PROCD_TRIGGER_OPEN" -gt 0 ] && { _PROCD_TRIGGER_OPEN=$((_PROCD_TRIGGER_OPEN + 1)); return; }
 	_PROCD_TRIGGER_OPEN=1
@@ -171,6 +204,34 @@ _procd_add_interface_trigger() {
 	json_add_array ""; _procd_add_array_data "eq" "interface" "$1"; shift; json_close_array
 	json_add_array ""; _procd_add_array_data "run_script" "$@"; json_close_array
 	json_close_array; json_close_array
+}
+
+_procd_add_data_trigger() {
+	json_add_array ""
+	_procd_add_array_data "service.data.update"
+	json_add_array ""
+	_procd_add_array_data "if"
+	json_add_array ""
+	_procd_add_array_data "eq" "name" "$1"
+	shift
+	json_close_array
+	json_add_array ""
+	_procd_add_array_data "run_script" "$@"
+	json_close_array
+	json_close_array
+	[ "$PROCD_RELOAD_DELAY" -gt 0 ] 2>/dev/null && json_add_int "" "$PROCD_RELOAD_DELAY"
+	json_close_array
+}
+
+_procd_add_reload_data_trigger() {
+	local script name t
+	script="$(readlink "$initscript" 2>/dev/null)"
+	name="$(basename "${script:-$initscript}")"
+	_procd_open_trigger
+	for t in "$@"; do
+		_procd_add_data_trigger "$t" /etc/init.d/"$name" reload
+	done
+	_procd_close_trigger
 }
 
 _procd_add_config_trigger() {
@@ -206,12 +267,62 @@ _procd_add_reload_interface_trigger() {
 
 _procd_open_validate() { json_add_array validate; }
 _procd_close_validate() { json_close_array; }
-_procd_add_validation() { :; }
+_procd_add_validation() {
+	_procd_open_validate
+	"$@"
+	_procd_close_validate
+}
+
+uci_validate_section() {
+	local _package="$1" _type="$2" _name="$3" _result _error
+	shift 3
+
+	if [ ! -x /sbin/validate_data ]; then
+		echo "uci_validate_section: /sbin/validate_data is missing" >&2
+		return 127
+	fi
+
+	_result="$(/sbin/validate_data "$_package" "$_type" "$_name" "$@" 2>/dev/null)"
+	_error=$?
+	eval "$_result"
+	[ "$_error" = 0 ] || /sbin/validate_data "$_package" "$_type" "$_name" "$@" >/dev/null
+	return "$_error"
+}
+
+uci_load_validate() {
+	local _package="$1" _type="$2" _name="$3" _function="$4" _option _result
+	shift 4
+
+	for _option in "$@"; do
+		eval "local ${_option%%:*}"
+	done
+
+	uci_validate_section "$_package" "$_type" "$_name" "$@"
+	_result=$?
+	[ -n "$_function" ] || return "$_result"
+	eval "$_function \"\$_name\" \"\$_result\""
+}
 
 # Jail API stubs: preserve init script execution; helper warns when unsupported fields matter.
 _procd_add_jail() { json_add_object jail; json_add_string name "$1"; json_close_object; }
 _procd_add_jail_mount() { :; }
 _procd_add_jail_mount_rw() { :; }
+
+# OpenWrt procd mDNS/umdns compatibility.
+_procd_add_mdns() {
+	local service="$1" port="$2"
+	shift 2
+
+	json_add_object mdns
+	json_add_string service "$service"
+	[ -n "$port" ] && json_add_int port "$port"
+	if [ "$#" -gt 0 ]; then
+		json_add_array txt
+		_procd_add_array_data "$@"
+		json_close_array
+	fi
+	json_close_object
+}
 
 _procd_set_config_changed() {
 	json_init; json_add_string type config.change; json_add_object data; json_add_string package "$1"; json_close_object
@@ -223,7 +334,7 @@ _procd_wrapper \
 	procd_open_service procd_close_service procd_add_instance \
 	procd_open_instance procd_close_instance procd_set_param procd_append_param \
 	procd_kill procd_open_trigger procd_close_trigger procd_add_reload_trigger \
-	procd_add_reload_interface_trigger procd_add_interface_trigger \
+	procd_add_reload_interface_trigger procd_add_reload_data_trigger procd_add_interface_trigger \
 	procd_add_config_trigger procd_add_raw_trigger procd_open_validate \
 	procd_close_validate procd_add_validation procd_add_jail \
-	procd_add_jail_mount procd_add_jail_mount_rw procd_set_config_changed
+	procd_add_jail_mount procd_add_jail_mount_rw procd_add_mdns procd_set_config_changed

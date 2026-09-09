@@ -1,13 +1,13 @@
 [Unit]
-Description=Load kernel modules from /etc/modules.d
-After=basic.target
-Wants=network-pre.target
-Before=multi-user.target
+Description=Load OpenWrt kernel modules
+After=local-fs.target
+Before=network-pre.target
+ConditionDirectoryNotEmpty=/etc/modules.d
 
 [Service]
 Type=oneshot
-ExecStart=/bin/sh -c 'for f in /etc/modules.d/*; do while read -r mod; do echo "Loading $mod..."; /sbin/modprobe "$mod" || echo "Failed $mod"; done < "$f"; done'
+ExecStart=/sbin/kmodloader /etc/modules.d/
 RemainAfterExit=yes
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=sysinit.target

@@ -1,27 +1,110 @@
 #!/bin/sh
-# Run OpenWrt rc.d compatibility scripts under systemd PID 1.
-set -u
 
-log() { echo "neon-rc: $*"; }
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin
 
-case "${1:-}" in
-	boot)
-		for s in /etc/rc.d/S*; do
-			[ -e "$s" ] || continue
-			log "start $(basename "$s")"
-			"$s" start || log "warning: $s start failed ($?)"
-		done
-		;;
-	shutdown)
-		# Reverse lexical order approximates OpenWrt shutdown ordering.
-		for s in $(ls -1r /etc/rc.d/K* 2>/dev/null); do
-			[ -e "$s" ] || continue
-			log "stop $(basename "$s")"
-			"$s" stop || log "warning: $s stop failed ($?)"
-		done
-		;;
-	*)
-		echo "usage: $0 boot|shutdown" >&2
-		exit 2
-		;;
+RC_COMMON=/etc/rc.common
+
+run_script()
+{
+    local script="$1"
+    local action="$2"
+
+    [ -e "$script" ] || return 0
+
+    echo "neon-rc: $action $(basename "$script")"
+
+    /bin/sh "$RC_COMMON" "$script" "$action"
+    ret=$?
+
+    if [ "$ret" -ne 0 ]; then
+        echo "neon-rc: warning: $script $action failed ($ret)" >&2
+    fi
+
+    # Keep boot/shutdown compatibility resilient: one failing legacy script
+    # must not prevent the rest of rc.d from being processed.
+    return 0
+}
+
+case "$1" in
+    boot)
+        deferred_dnsmasq=""
+
+        for script in /etc/rc.d/S*; do
+            [ -e "$script" ] || continue
+
+            name="$(basename "$script")"
+
+            case "$name" in
+                S*dnsmasq)
+                    echo "neon-rc: defer $name until network is ready"
+                    deferred_dnsmasq="$script"
+                    continue
+                    ;;
+
+                S*network)
+                    # Start netifd first
+                    run_script "$script" boot
+
+                    # Start deferred dnsmasq only after LAN is ready
+                    if [ -n "$deferred_dnsmasq" ]; then
+                        if [ -x /usr/libexec/neon-network-ready ]; then
+                            echo "neon-rc: waiting for LAN before dnsmasq"
+
+                            if /usr/libexec/neon-network-ready; then
+                                echo "neon-rc: LAN ready"
+                            else
+                                echo "neon-rc: warning: LAN readiness timeout" >&2
+                            fi
+                        else
+                            echo "neon-rc: warning: /usr/libexec/neon-network-ready missing" >&2
+                        fi
+
+                        echo "neon-rc: starting deferred $(basename "$deferred_dnsmasq")"
+                        run_script "$deferred_dnsmasq" boot
+                        deferred_dnsmasq=""
+                    fi
+
+                    continue
+                    ;;
+            esac
+
+            run_script "$script" boot
+        done
+
+        # Fallback for images without an S*network script
+        if [ -n "$deferred_dnsmasq" ]; then
+            echo "neon-rc: warning: network rc script missing; starting deferred dnsmasq" >&2
+            run_script "$deferred_dnsmasq" boot
+        fi
+        ;;
+
+    start)
+        for script in /etc/rc.d/S*; do
+            [ -e "$script" ] || continue
+            run_script "$script" start
+        done
+        ;;
+
+    shutdown)
+        # Match native OpenWrt rcS semantics:
+        #   /etc/init.d/rcS K shutdown
+        for script in /etc/rc.d/K*; do
+            [ -e "$script" ] || continue
+            run_script "$script" shutdown
+        done
+        ;;
+
+    stop)
+        for script in /etc/rc.d/K*; do
+            [ -e "$script" ] || continue
+            run_script "$script" stop
+        done
+        ;;
+
+    *)
+        echo "Usage: $0 {boot|start|shutdown|stop}" >&2
+        exit 1
+        ;;
 esac
+
+exit 0

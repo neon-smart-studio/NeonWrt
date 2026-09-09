@@ -1,4 +1,4 @@
-# neon-procd 0.2.0
+# neon-procd 0.2.2
 
 OpenWrt `procd` compatibility layer for NeonWrt with **systemd as PID 1**.
 
@@ -32,6 +32,7 @@ OpenWrt `procd` compatibility layer for NeonWrt with **systemd as PID 1**.
 - named/multiple instances
 - delete/kill, signal, running/status
 - ubus `service set`, `list`, `delete`, `signal`, `event`
+- ubus `system board` and `system info` compatibility for LuCI without upstream procd
 - `config.change` reload triggers
 - interface trigger matching (`interface.*` plus interface equality)
 - raw trigger execution (basic immediate semantics)
@@ -78,6 +79,8 @@ Do not install upstream procd's `/lib/functions/procd.sh` over this package.
 systemctl status neon-procd-ubus
 ubus list service
 ubus call service list
+ubus call system board
+ubus call system info
 ```
 
 Then test a normal `USE_PROCD=1` service:

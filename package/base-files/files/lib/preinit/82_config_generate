@@ -7,9 +7,13 @@ do_config_generate() {
 		echo "- generating board file -"
 		/bin/board_detect /tmp/board.json
 		mv /tmp/board.json /etc/board.json
-
-		/bin/config_generate > /dev/null
 	}
+
+	# Always run config_generate. It is idempotent and only creates network/system
+	# configs when they are missing. Previously this was only called when
+	# /etc/board.json was absent, which left /etc/config/system missing on images
+	# that already shipped board.json.
+	/bin/config_generate > /dev/null
 }
 
 boot_hook_add preinit_main do_config_generate

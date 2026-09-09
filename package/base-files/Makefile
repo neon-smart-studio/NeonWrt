@@ -27,6 +27,7 @@ PKG_CONFIG_DEPENDS += \
 	CONFIG_EMMC_SUPPORT \
 	CONFIG_CLEAN_IPKG \
 	CONFIG_PER_FEED_REPO \
+	CONFIG_TARGET_ROOTFS_PERSIST_VAR \
 	$(foreach feed,$(FEEDS_AVAILABLE),CONFIG_FEED_$(feed))
 
 include $(INCLUDE_DIR)/package.mk
@@ -40,7 +41,7 @@ define Package/base-files
   SECTION:=base
   CATEGORY:=Base system
   DEPENDS:= \
-	+systemd \
+	+systemd +uci +neon-procd +neon-uci \
 	+netifd +libc +jsonfilter +SIGNED_PACKAGES:usign +SIGNED_PACKAGES:openwrt-keyring \
 	+NAND_SUPPORT:ubi-utils +fstools +fwtool \
 	+SELINUX:busybox-selinux +!SELINUX:busybox
@@ -237,9 +238,15 @@ define Package/base-files/install
 		$(1)/run \
 		$(1)/run/lock
 
-	# Keep /var as a real directory so packages may install persistent state
-	# below /var/lib, /var/log and /var/cache.
-	#
+	# OpenWrt runtime state is volatile by default.  Keeping /var as a real
+	# directory on the rootfs breaks when the root filesystem is mounted ro
+	# (dnsmasq, dropbear, random-seed, auditd, etc. all need writable state).
+	# Restore the standard OpenWrt /var -> /tmp layout unless the target
+	# explicitly requests a persistent /var.
+ifneq ($(CONFIG_TARGET_ROOTFS_PERSIST_VAR),y)
+	rm -rf $(1)/var
+	$(LN) tmp $(1)/var
+else
 	rm -rf $(1)/var
 	mkdir -p \
 		$(1)/var \
@@ -247,11 +254,91 @@ define Package/base-files/install
 		$(1)/var/log \
 		$(1)/var/cache \
 		$(1)/var/tmp
-
 	chmod 1777 $(1)/var/tmp
-
 	$(LN) /run $(1)/var/run
 	$(LN) /run/lock $(1)/var/lock
+endif
+
+	# Runtime directories expected by OpenWrt init scripts.  systemd-tmpfiles
+	# creates these after /run and /tmp are mounted, before neon-openwrt-rc.
+	mkdir -p $(1)/usr/lib/tmpfiles.d
+	printf '%s\n' \
+		'd /run/lock 0755 root root -' \
+		'd /tmp/.uci 0700 root root -' \
+		'd /tmp/resolv.conf.d 0755 root root -' \
+		'f /tmp/resolv.conf.d/resolv.conf.auto 0644 root root -' \
+		'L+ /tmp/resolv.conf - - - - /tmp/resolv.conf.d/resolv.conf.auto' \
+		'd /var/etc 0755 root root -' \
+		'd /var/etc/ssl 0755 root root -' \
+		'd /var/lib 0755 root root -' \
+		'd /var/lib/systemd 0755 root root -' \
+		'd /var/cache 0755 root root -' \
+		'd /var/log 0755 root root -' \
+		'd /var/log/audit 0700 root root -' \
+		'd /var/state 0755 root root -' \
+		'd /var/tmp 1777 root root -' \
+		'L+ /var/run - - - - /run' \
+		'L+ /var/lock - - - - /run/lock' \
+		> $(1)/usr/lib/tmpfiles.d/neonwrt.conf
+
+	# Minimal local identities required by systemd tmpfiles/network services.
+	# Add only when missing so platform overlays may provide their own IDs.
+	grep -q '^disk:' $(1)/etc/group || echo 'disk:x:6:' >> $(1)/etc/group
+	grep -q '^utmp:' $(1)/etc/group || echo 'utmp:x:22:' >> $(1)/etc/group
+	grep -q '^wheel:' $(1)/etc/group || echo 'wheel:x:10:root' >> $(1)/etc/group
+	grep -q '^kvm:' $(1)/etc/group || echo 'kvm:x:36:' >> $(1)/etc/group
+	grep -q '^systemd-journal:' $(1)/etc/group || echo 'systemd-journal:x:190:' >> $(1)/etc/group
+	grep -q '^systemd-network:' $(1)/etc/group || echo 'systemd-network:x:192:' >> $(1)/etc/group
+	grep -q '^systemd-resolve:' $(1)/etc/group || echo 'systemd-resolve:x:193:' >> $(1)/etc/group
+	grep -q '^systemd-timesync:' $(1)/etc/group || echo 'systemd-timesync:x:194:' >> $(1)/etc/group
+
+	grep -q '^systemd-network:' $(1)/etc/passwd || \
+		echo 'systemd-network:x:192:192:systemd Network Management:/:/bin/false' >> $(1)/etc/passwd
+	grep -q '^systemd-resolve:' $(1)/etc/passwd || \
+		echo 'systemd-resolve:x:193:193:systemd Resolver:/:/bin/false' >> $(1)/etc/passwd
+	grep -q '^systemd-timesync:' $(1)/etc/passwd || \
+		echo 'systemd-timesync:x:194:194:systemd Time Synchronization:/:/bin/false' >> $(1)/etc/passwd
+
+	grep -q '^systemd-network:' $(1)/etc/shadow || \
+		echo 'systemd-network:!:0:0:99999:7:::' >> $(1)/etc/shadow
+	grep -q '^systemd-resolve:' $(1)/etc/shadow || \
+		echo 'systemd-resolve:!:0:0:99999:7:::' >> $(1)/etc/shadow
+	grep -q '^systemd-timesync:' $(1)/etc/shadow || \
+		echo 'systemd-timesync:!:0:0:99999:7:::' >> $(1)/etc/shadow
+
+	# systemd-remount-fs has no OpenWrt-style /etc/fstab entry to tell it to
+	# remount an ext4 root rw.  Add a tiny early helper/unit: writable
+	# filesystems are remounted rw, while squashfs is intentionally left ro.
+	mkdir -p \
+		$(1)/usr/libexec \
+		$(1)/usr/lib/systemd/system \
+		$(1)/usr/lib/systemd/system/sysinit.target.wants
+	printf '%s\n' \
+		'#!/bin/sh' \
+		'fstype=' \
+		'while read dev mp type opts rest; do' \
+		'    [ "$$mp" = "/" ] && { fstype="$$type"; break; }' \
+		'done < /proc/mounts' \
+		'[ "$$fstype" = "squashfs" ] && exit 0' \
+		'/bin/mount -o remount,rw /' \
+		> $(1)/usr/libexec/neon-root-rw
+	chmod 0755 $(1)/usr/libexec/neon-root-rw
+
+	printf '%s\n' \
+		'[Unit]' \
+		'Description=Prepare writable NeonWrt root filesystem' \
+		'DefaultDependencies=no' \
+		'After=systemd-remount-fs.service' \
+		'Before=systemd-random-seed.service systemd-tmpfiles-setup.service systemd-tmpfiles-setup-dev.service' \
+		'' \
+		'[Service]' \
+		'Type=oneshot' \
+		'ExecStart=/usr/libexec/neon-root-rw' \
+		'RemainAfterExit=yes' \
+		> $(1)/usr/lib/systemd/system/neon-root-rw.service
+	ln -sf /usr/lib/systemd/system/neon-root-rw.service \
+		$(1)/usr/lib/systemd/system/sysinit.target.wants/neon-root-rw.service
+
 
 	$(LN) /tmp/resolv.conf /tmp/TZ /tmp/localtime $(1)/etc/
 
@@ -260,6 +347,29 @@ define Package/base-files/install
 
 	$(call ImageConfigOptions,$(1))
 	$(call Package/base-files/install-target,$(1))
+
+	# Force the UCI bootstrap wiring into the final package image after all
+	# generic, platform and install-target overlays have been applied.
+	mkdir -p \
+		$(1)/usr/lib/systemd/system/sysinit.target.wants \
+		$(1)/usr/lib/systemd/system/neon-uci.service.d \
+		$(1)/usr/lib/systemd/system/neon-openwrt-rc.service.d
+	chmod 0755 $(1)/usr/libexec/neon-config-generate
+	ln -sfn ../neon-config-generate.service \
+		$(1)/usr/lib/systemd/system/sysinit.target.wants/neon-config-generate.service
+
+	# Before=/After= only orders units already in the transaction.  These
+	# drop-ins also pull the bootstrap in whenever either consumer starts.
+	printf '%s\n' \
+		'[Unit]' \
+		'Requires=neon-config-generate.service' \
+		'After=neon-config-generate.service' \
+		> $(1)/usr/lib/systemd/system/neon-uci.service.d/10-neon-config-generate.conf
+	printf '%s\n' \
+		'[Unit]' \
+		'Requires=neon-config-generate.service' \
+		'After=neon-config-generate.service' \
+		> $(1)/usr/lib/systemd/system/neon-openwrt-rc.service.d/10-neon-config-generate.conf
 
 	for conffile in $(1)/etc/config/*; do \
 		if [ -f "$$$$conffile" ]; then \
@@ -304,7 +414,16 @@ endif
 	# report a file ownership collision with systemd.
 	#
 	rm -f $(1)/sbin/init
-
+	
+	#
+	# NeonWrt boot-critical scripts
+	#
+	chmod 0755 $(1)/bin/board_detect
+	chmod 0755 $(1)/bin/config_generate
+	chmod 0755 $(1)/bin/ipcalc.sh
+	chmod 0755 $(1)/etc/init.d/boot
+	chmod 0755 $(1)/usr/libexec/neon-config-generate
+	chmod 0755 $(1)/usr/libexec/neon-wifi-config
 endef
 
 ifneq ($(DUMP),1)

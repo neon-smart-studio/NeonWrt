@@ -106,22 +106,11 @@ dhcp_calc() {
 }
 
 dhcp_check() {
-	local ifname="$1"
-	local stamp="${BASEDHCPSTAMPFILE_CFG}.${ifname}.dhcp"
-	local rv=0
-
-	[ -s "$stamp" ] && return $(cat "$stamp")
-
-	# If interface is down, skip it.
-	# The init script will be called again once the link is up
-	case "$(devstatus "$ifname" | jsonfilter -e @.up)" in
-		false) return 1;;
-	esac
-
-	udhcpc -n -q -s /bin/true -t 1 -i "$ifname" >&- && rv=1 || rv=0
-
-	echo $rv > "$stamp"
-	return $rv
+	# NeonWrt: always allow dnsmasq DHCP server generation.
+	# The upstream udhcpc probe can incorrectly detect an existing DHCP
+	# server during the systemd/netifd startup sequence and suppress
+	# dhcp-range generation for the LAN interface.
+	return 0
 }
 
 log_once() {
@@ -1326,7 +1315,10 @@ service_triggers()
 
 boot()
 {
-	BOOT=1
+	# NeonWrt:
+	# Generate full dnsmasq configuration during boot.
+	# We do not depend on procd interface-trigger reload to add DHCP later.
+	BOOT=
 	start "$@"
 }
 

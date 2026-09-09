@@ -32,7 +32,6 @@ CONFIGURE_ARGS_EMBEDDED = \
 	--enable-binfmt \
 	--enable-firstboot \
 	--enable-hibernate \
-	--enable-ldconfig \
 	--enable-microhttpd \
 	--enable-nls \
 	--disable-qrencode \
@@ -44,12 +43,13 @@ CONFIGURE_ARGS += \
 	--prefix=/usr \
 	--sysconfdir=/etc \
 	-Dc_link_args="-Wl,--disable-new-dtags -Wl,-rpath=/usr/lib" \
+	--disable-logind \
+	--disable-networkd \
 	--enable-dbus \
 	--enable-udevd \
 	--enable-getty \
 	--enable-shutdown \
 	--enable-pam \
-	--disable-logind \
 	--enable-seccomp \
 	$(CONFIGURE_ARGS_FAST_BUILD) \
 	$(CONFIGURE_ARGS_EMBEDDED) \
@@ -71,15 +71,18 @@ CONFIGURE_ARGS += \
 	--enable-gnutls \
 	--enable-libcurl \
 	--enable-switch-root \
-	--enable-sulogin \
-	--enable-networkd
+	--enable-sulogin
 
 MESON_ARGS += \
 	-Dukify=disabled \
 	-Dbootloader=disabled \
+	-Dldconfig=false \
+	-Dsysvinit-path= \
+	-Dsysvrcnd-path= \
 	-Dlibdir=/usr/lib \
 	-Dutmp=true \
 	-Dlogind=false \
+	-Dnetworkd=false \
 	-Dpam=enabled \
 	-Dseccomp=enabled \
 	-Dstatic-libsystemd=false \
@@ -145,8 +148,6 @@ $(call Package/systemd/Default)
 	DEPENDS+= +systemd +libapparmor +libpam +libselinux +libseccomp
 endef
 
-
-
 define Package/systemd/install
 	$(INSTALL_DIR) $(1)/etc/binfmt.d
 	$(INSTALL_DIR) $(1)/etc/credstore
@@ -165,11 +166,32 @@ define Package/systemd/install
 
 	$(INSTALL_DIR) $(1)/etc/systemd
 	$(CP) $(PKG_INSTALL_DIR)/etc/systemd/*.conf $(1)/etc/systemd
-	
-	echo "LogLevel=debug" > $(1)/etc/systemd/system.conf
-	echo "ForwardToConsole=yes" >> $(1)/etc/systemd/journald.conf
+
+	# Keep the main configuration files syntactically valid.  The old
+	# Makefile wrote LogLevel= outside [Manager], which systemd ignored.
+	printf '%s\n' \
+		'[Manager]' \
+		'LogLevel=debug' \
+		'DefaultEnvironment=PATH=/usr/sbin:/usr/bin:/sbin:/bin' \
+		> $(1)/etc/systemd/system.conf
+
+	printf '%s\n' \
+		'[Journal]' \
+		'ForwardToConsole=yes' \
+		'Storage=volatile' \
+		> $(1)/etc/systemd/journald.conf
 
 	$(INSTALL_DIR) $(1)/etc/systemd/network
+
+	# OpenWrt /sbin/modprobe is provided by kmodloader and does not support
+	# systemd's -b (blacklist) option.  Override modprobe@.service with the
+	# single-module syntax supported by OpenWrt.
+	$(INSTALL_DIR) $(1)/etc/systemd/system/modprobe@.service.d
+	printf '%s\n' \
+		'[Service]' \
+		'ExecStart=' \
+		'ExecStart=-/sbin/modprobe -q %i' \
+		> $(1)/etc/systemd/system/modprobe@.service.d/10-openwrt.conf
 
 	$(INSTALL_DIR) $(1)/etc/systemd/system/multi-user.target.wants
 	ln -sf \
@@ -194,8 +216,16 @@ define Package/systemd/install
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/udev/scsi_id $(1)/usr/lib/udev
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/lib/udev/v4l_id $(1)/usr/lib/udev
 
+	# Install the full udev rules/hwdb set.  systemd .device units and
+	# serial/block/network device handling depend on these rules.
 	$(INSTALL_DIR) $(1)/usr/lib/udev/rules.d
+	[ ! -d $(PKG_INSTALL_DIR)/usr/lib/udev/rules.d ] || \
+		$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/udev/rules.d/. \
+			$(1)/usr/lib/udev/rules.d/
 	$(INSTALL_DIR) $(1)/usr/lib/udev/hwdb.d
+	[ ! -d $(PKG_INSTALL_DIR)/usr/lib/udev/hwdb.d ] || \
+		$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/udev/hwdb.d/. \
+			$(1)/usr/lib/udev/hwdb.d/
 
 	$(INSTALL_DIR) $(1)/etc/X11/xinit/xinitrc.d
 	$(CP) $(PKG_INSTALL_DIR)/etc/X11/xinit/xinitrc.d/50-systemd-user.sh $(1)/etc/X11/xinit/xinitrc.d
@@ -319,57 +349,97 @@ define Package/systemd/install
 	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/*.target $(1)/usr/lib/systemd/system
 	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/systemd/system/*.timer $(1)/usr/lib/systemd/system
 
+	# Copy only target dependency/drop-in directories that Meson actually installed.
+	# Using source/. avoids the shell-glob failure caused by an empty directory.
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/graphical.target.wants
-	$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/graphical.target.wants/* $(1)/usr/lib/systemd/system/graphical.target.wants
+	[ ! -d $(PKG_INSTALL_DIR)/usr/lib/systemd/system/graphical.target.wants ] || \
+		$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/graphical.target.wants/. \
+			$(1)/usr/lib/systemd/system/graphical.target.wants/
+
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/initrd-root-fs.target.wants
-	$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/initrd-root-fs.target.wants/* $(1)/usr/lib/systemd/system/initrd-root-fs.target.wants
+	[ ! -d $(PKG_INSTALL_DIR)/usr/lib/systemd/system/initrd-root-fs.target.wants ] || \
+		$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/initrd-root-fs.target.wants/. \
+			$(1)/usr/lib/systemd/system/initrd-root-fs.target.wants/
+
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/initrd.target.wants
-	$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/initrd.target.wants/* $(1)/usr/lib/systemd/system/initrd.target.wants
+	[ ! -d $(PKG_INSTALL_DIR)/usr/lib/systemd/system/initrd.target.wants ] || \
+		$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/initrd.target.wants/. \
+			$(1)/usr/lib/systemd/system/initrd.target.wants/
+
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/local-fs.target.wants
-	$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/local-fs.target.wants/* $(1)/usr/lib/systemd/system/local-fs.target.wants
+	[ ! -d $(PKG_INSTALL_DIR)/usr/lib/systemd/system/local-fs.target.wants ] || \
+		$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/local-fs.target.wants/. \
+			$(1)/usr/lib/systemd/system/local-fs.target.wants/
+
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/machines.target.wants
-	$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/machines.target.wants/* $(1)/usr/lib/systemd/system/machines.target.wants
+	[ ! -d $(PKG_INSTALL_DIR)/usr/lib/systemd/system/machines.target.wants ] || \
+		$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/machines.target.wants/. \
+			$(1)/usr/lib/systemd/system/machines.target.wants/
+
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/multi-user.target.wants
-	$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/multi-user.target.wants/* $(1)/usr/lib/systemd/system/multi-user.target.wants
+	[ ! -d $(PKG_INSTALL_DIR)/usr/lib/systemd/system/multi-user.target.wants ] || \
+		$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/multi-user.target.wants/. \
+			$(1)/usr/lib/systemd/system/multi-user.target.wants/
+
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/remote-fs.target.wants
-	$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/remote-fs.target.wants/* $(1)/usr/lib/systemd/system/remote-fs.target.wants
+	[ ! -d $(PKG_INSTALL_DIR)/usr/lib/systemd/system/remote-fs.target.wants ] || \
+		$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/remote-fs.target.wants/. \
+			$(1)/usr/lib/systemd/system/remote-fs.target.wants/
+
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/rescue.target.wants
-	$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/rescue.target.wants/* $(1)/usr/lib/systemd/system/rescue.target.wants
-	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/runlevel1.target.wants
-	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/runlevel2.target.wants
-	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/runlevel3.target.wants
-	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/runlevel4.target.wants
-	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/runlevel5.target.wants
+	[ ! -d $(PKG_INSTALL_DIR)/usr/lib/systemd/system/rescue.target.wants ] || \
+		$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/rescue.target.wants/. \
+			$(1)/usr/lib/systemd/system/rescue.target.wants/
+
+	# NeonWrt does not use SysV runlevel wants directories. OpenWrt init.d
+	# compatibility is handled by neon-rc + neon-procd instead.
+
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/sockets.target.wants
-	$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/sockets.target.wants/* $(1)/usr/lib/systemd/system/sockets.target.wants
+	[ ! -d $(PKG_INSTALL_DIR)/usr/lib/systemd/system/sockets.target.wants ] || \
+		$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/sockets.target.wants/. \
+			$(1)/usr/lib/systemd/system/sockets.target.wants/
+
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/sysinit.target.wants
-	$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/sysinit.target.wants/* $(1)/usr/lib/systemd/system/sysinit.target.wants
+	[ ! -d $(PKG_INSTALL_DIR)/usr/lib/systemd/system/sysinit.target.wants ] || \
+		$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/sysinit.target.wants/. \
+			$(1)/usr/lib/systemd/system/sysinit.target.wants/
+
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/timers.target.wants
-	$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/timers.target.wants/* $(1)/usr/lib/systemd/system/timers.target.wants
+	[ ! -d $(PKG_INSTALL_DIR)/usr/lib/systemd/system/timers.target.wants ] || \
+		$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/timers.target.wants/. \
+			$(1)/usr/lib/systemd/system/timers.target.wants/
+
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/user-.slice.d
-	$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/user-.slice.d/* $(1)/usr/lib/systemd/system/user-.slice.d
+	[ ! -d $(PKG_INSTALL_DIR)/usr/lib/systemd/system/user-.slice.d ] || \
+		$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/user-.slice.d/. \
+			$(1)/usr/lib/systemd/system/user-.slice.d/
+
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/user@.service.d
-	$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/user@.service.d/* $(1)/usr/lib/systemd/system/user@.service.d
+	[ ! -d $(PKG_INSTALL_DIR)/usr/lib/systemd/system/user@.service.d ] || \
+		$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/user@.service.d/. \
+			$(1)/usr/lib/systemd/system/user@.service.d/
+
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/user@0.service.d
-	$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/user@0.service.d/* $(1)/usr/lib/systemd/system/user@0.service.d
+	[ ! -d $(PKG_INSTALL_DIR)/usr/lib/systemd/system/user@0.service.d ] || \
+		$(CP) -a $(PKG_INSTALL_DIR)/usr/lib/systemd/system/user@0.service.d/. \
+			$(1)/usr/lib/systemd/system/user@0.service.d/
 
-	$(INSTALL_DIR) $(1)/etc/systemd/system/getty.target.wants
-	ln -sf /usr/lib/systemd/system/serial-getty@.service \
-		$(1)/etc/systemd/system/getty.target.wants/serial-getty@ttyAMA0.service
-	ln -sf /usr/lib/systemd/system/getty@.service \
-	    $(1)/etc/systemd/system/getty.target.wants/getty@tty1.service
-	ln -sf /etc/systemd/system/serial-shell.service $(1)/usr/lib/systemd/system/multi-user.target.wants/serial-shell.service
+	# Do not enable the old custom load-kmods.service here.  OpenWrt's
+	# /etc/init.d/boot already invokes /sbin/kmodloader, and enabling both
+	# paths caused bogus module names such as "0" and "09" to be loaded.
 
-	ln -sf /etc/systemd/system/load-kmods.service $(1)/usr/lib/systemd/system/sysinit.target.wants/load-kmods.service
-
-	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/network-online.target.wants
-	ln -sf /usr/lib/systemd/system/systemd-networkd-wait-online.service \
-		$(1)/usr/lib/systemd/system/network-online.target.wants/systemd-networkd-wait-online.service
+	#$(INSTALL_DIR) $(1)/usr/lib/systemd/system/network-online.target.wants
+	#ln -sf /usr/lib/systemd/system/systemd-networkd-wait-online.service \
+	#	$(1)/usr/lib/systemd/system/network-online.target.wants/systemd-networkd-wait-online.service
 
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system-generators
 	$(INSTALL_BIN) \
 		$(PKG_INSTALL_DIR)/usr/lib/systemd/system-generators/systemd-* \
 		$(1)/usr/lib/systemd/system-generators
+
+	# NeonWrt uses neon-rc + neon-procd for OpenWrt /etc/init.d compatibility.
+	# Do not let systemd generate SysV compatibility units for OpenWrt scripts.
+	rm -f $(1)/usr/lib/systemd/system-generators/systemd-sysv-generator
 
 	$(INSTALL_DIR) $(1)/usr/lib/systemd/system-preset
 	$(CP) \
@@ -409,15 +479,33 @@ define Package/systemd/install
 		$(PKG_INSTALL_DIR)/usr/lib/tmpfiles.d/*.conf \
 		$(1)/usr/lib/tmpfiles.d
 
+	# OpenWrt/NeonWrt uses /var -> /tmp.
+	# systemd's generic var.conf expects /var to be a real directory,
+	# so it must not manage /var on NeonWrt.
+	rm -f $(1)/usr/lib/tmpfiles.d/var.conf
+	rm -f $(1)/usr/lib/tmpfiles.d/tmp.conf
+
 	$(INSTALL_DIR) $(1)/usr/sbin
-	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/sbin/mount.ddi $(1)/usr/sbin
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/halt $(1)/usr/sbin
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/poweroff $(1)/usr/sbin
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/reboot $(1)/usr/sbin
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/resolvconf $(1)/usr/sbin
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/runlevel $(1)/usr/sbin
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/shutdown $(1)/usr/sbin
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/telinit $(1)/usr/sbin
+	# Some compatibility binaries are omitted by systemd when SysV support is disabled.
+	# Install only the binaries that Meson actually produced.
+	[ ! -e $(PKG_INSTALL_DIR)/usr/sbin/mount.ddi ] || \
+		$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/sbin/mount.ddi $(1)/usr/sbin/
+	[ ! -e $(PKG_INSTALL_DIR)/usr/sbin/halt ] || \
+		$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/halt $(1)/usr/sbin/
+
+	[ ! -e $(PKG_INSTALL_DIR)/usr/sbin/poweroff ] || \
+		$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/poweroff $(1)/usr/sbin/
+
+	[ ! -e $(PKG_INSTALL_DIR)/usr/sbin/reboot ] || \
+		$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/reboot $(1)/usr/sbin/
+
+	[ ! -e $(PKG_INSTALL_DIR)/usr/sbin/resolvconf ] || \
+		$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/resolvconf $(1)/usr/sbin/
+
+	[ ! -e $(PKG_INSTALL_DIR)/usr/sbin/shutdown ] || \
+		$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/shutdown $(1)/usr/sbin/
+	# runlevel and telinit are SysV compatibility commands; NeonWrt intentionally
+	# disables SysV compatibility and therefore does not package them.
 
 	# systemd1 is a system-bus activation file. Install it directly from
 	# the source tree so packaging does not depend on Meson's detected
@@ -430,6 +518,49 @@ define Package/systemd/install
 	# Install NeonWrt custom files before final init links.
 	# The PID1 links are deliberately created last so ./files cannot overwrite them.
 	$(CP) ./files/* $(1)/
+
+	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/sysinit.target.wants
+	ln -sf ../neon-kmodloader.service \
+		$(1)/usr/lib/systemd/system/sysinit.target.wants/neon-kmodloader.service
+		
+	# Re-assert NeonWrt console policy after custom files are copied.
+	# tty1 is the local console; ttyAMA0 is the Raspberry Pi PL011 serial console.
+	# serial-getty@.service is patched to avoid waiting forever on
+	# dev-ttyAMA0.device; the concrete ttyAMA0 instance autologins root.
+	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/getty.target.wants
+	ln -sfn ../getty@.service \
+		$(1)/usr/lib/systemd/system/getty.target.wants/getty@tty1.service
+	ln -sfn ../serial-getty@.service \
+		$(1)/usr/lib/systemd/system/getty.target.wants/serial-getty@ttyAMA0.service
+
+	$(INSTALL_DIR) $(1)/usr/lib/systemd/system/serial-getty@ttyAMA0.service.d
+	$(INSTALL_DATA) \
+		./files/usr/lib/systemd/system/serial-getty@ttyAMA0.service.d/autologin.conf \
+		$(1)/usr/lib/systemd/system/serial-getty@ttyAMA0.service.d/autologin.conf
+
+	# Remove the obsolete custom serial shell.  systemd serial-getty owns ttyAMA0.
+	rm -f $(1)/usr/lib/systemd/system/serial-shell.service
+	rm -f $(1)/etc/systemd/system/serial-shell.service
+	rm -f $(1)/usr/lib/systemd/system/multi-user.target.wants/serial-shell.service
+	rm -f $(1)/etc/systemd/system/multi-user.target.wants/serial-shell.service
+
+	# base-files owns the /var layout.  Do not let a files/var directory from
+	# this package collide with base-files' /var -> /tmp symlink.
+	rm -rf $(1)/var
+
+	# Re-assert the NeonWrt manager/journal settings after custom files are
+	# copied, in case files/etc/systemd contains local templates.
+	$(INSTALL_DIR) $(1)/etc/systemd
+	printf '%s\n' \
+		'[Manager]' \
+		'LogLevel=debug' \
+		'DefaultEnvironment=PATH=/usr/sbin:/usr/bin:/sbin:/bin' \
+		> $(1)/etc/systemd/system.conf
+	printf '%s\n' \
+		'[Journal]' \
+		'ForwardToConsole=yes' \
+		'Storage=volatile' \
+		> $(1)/etc/systemd/journald.conf
 	
 	$(INSTALL_DIR) $(1)/etc
 	$(INSTALL_DATA) ./files/etc/os-release $(1)/etc/os-release

@@ -1,8 +1,8 @@
+# neon-openwrt-rc.service
 [Unit]
 Description=NeonWrt OpenWrt rc.d compatibility boot
-DefaultDependencies=no
-After=local-fs.target systemd-tmpfiles-setup.service
-Before=multi-user.target
+Requires=neon-procd-ubus.service
+After=neon-procd-ubus.service local-fs.target systemd-tmpfiles-setup.service systemd-udevd.service
 
 [Service]
 Type=oneshot

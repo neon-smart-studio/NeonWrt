@@ -769,11 +769,13 @@ config KERNEL_DEVTMPFS
 	  devtmpfs is a simple, kernel-managed /dev filesystem. The kernel creates
 	  devices nodes for all registered devices to simplify boot, but leaves more
 	  complex tasks to userspace (e.g. udev).
+	default y
 
 if KERNEL_DEVTMPFS
 
 	config KERNEL_DEVTMPFS_MOUNT
 		bool "Automatically mount devtmpfs after root filesystem is mounted"
+		default y
 
 endif
 
@@ -1421,6 +1423,7 @@ endchoice
 
 config KERNEL_AUDIT
 	bool "Auditing support"
+	default y
 
 config KERNEL_SECURITY
 	bool "Enable different security models"

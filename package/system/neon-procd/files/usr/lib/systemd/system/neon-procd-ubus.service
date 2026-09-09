@@ -1,14 +1,17 @@
 [Unit]
 Description=NeonWrt procd ubus compatibility service
-After=ubus.service
+Requires=ubusd.service
+After=ubusd.service
 Before=neon-openwrt-rc.service
-Wants=ubus.service
 
 [Service]
-Type=simple
+Type=notify
+NotifyAccess=main
 ExecStart=/usr/sbin/neon-procd-ubus
 Restart=on-failure
-RestartSec=1s
+RestartSec=2
+TimeoutStartSec=35s
+TimeoutStopSec=15s
 
 [Install]
 WantedBy=multi-user.target

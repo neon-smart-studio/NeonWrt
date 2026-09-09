@@ -5,9 +5,10 @@ import * as uci from 'uci';
 const bands_order = [ "6G", "5G", "2G" ];
 const htmode_order = [ "EHT", "HE", "VHT", "HT" ];
 
-let board = json(readfile("/etc/board.json"));
+let board = json(readfile("/etc/board.json")) ?? {};
+
 if (!board.wlan)
-	exit(0);
+	board.wlan = {};
 
 let idx = 0;
 let commit;
@@ -40,6 +41,7 @@ for (let phy_name, phy in board.wlan) {
 	for (let radio in radios) {
 		while (config[`radio${idx}`])
 			idx++;
+
 		let name = "radio" + idx;
 
 		let s = "wireless." + name;
@@ -72,6 +74,21 @@ for (let phy_name, phy in board.wlan) {
 		if (radio_exists(phy.path, macaddr, phy_name, radio.index))
 			continue;
 
+		/*
+		 * NeonWrt factory default SSID:
+		 *
+		 *   aa:bb:cc:12:34:56 -> NeonWrt-123456
+		 *
+		 * Use the PHY MAC address instead of wlan0, because wlan0 does not
+		 * necessarily exist yet while the initial wireless UCI config is
+		 * being generated.
+		 */
+		let neon_mac = replace(uc(macaddr), /:/g, "");
+		let neon_suffix = length(neon_mac) >= 6
+			? substr(neon_mac, length(neon_mac) - 6)
+			: neon_mac;
+		let neon_ssid = `NeonWrt-${neon_suffix}`;
+
 		let id = `phy='${phy_name}'`;
 		if (match(phy_name, /^phy[0-9]/))
 			id = `path='${phy.path}'`;
@@ -79,18 +96,32 @@ for (let phy_name, phy in board.wlan) {
 		band_name = lc(band_name);
 
 		let country, encryption, defaults, num_global_macaddr;
+
+		/*
+		 * NeonWrt default regulatory domain is Taiwan.
+		 * An explicit board.wlan.defaults.country still overrides this.
+		 */
+		country = 'TW';
+
 		if (band_name == '6g') {
-			country = '00';
 			encryption = 'owe';
 		} else {
 			encryption = 'none';
 		}
+
 		if (board.wlan.defaults) {
-			defaults = board.wlan.defaults.ssids?.[band_name]?.ssid ? board.wlan.defaults.ssids?.[band_name] : board.wlan.defaults.ssids?.all;
-			country = board.wlan.defaults.country;
+			defaults = board.wlan.defaults.ssids?.[band_name]?.ssid
+				? board.wlan.defaults.ssids?.[band_name]
+				: board.wlan.defaults.ssids?.all;
+
+			if (board.wlan.defaults.country)
+				country = board.wlan.defaults.country;
+
 			if (!country && band_name != '2g')
 				defaults = null;
-			num_global_macaddr = board.wlan.defaults.ssids?.[band_name]?.mac_count;
+
+			num_global_macaddr =
+				board.wlan.defaults.ssids?.[band_name]?.mac_count;
 		}
 
 		if (length(info.radios) > 0)
@@ -109,10 +140,11 @@ set ${si}=wifi-iface
 set ${si}.device='${name}'
 set ${si}.network='lan'
 set ${si}.mode='ap'
-set ${si}.ssid='${defaults?.ssid || "OpenWrt"}'
+set ${si}.ifname='wlan0'
+set ${si}.ssid='${defaults?.ssid || neon_ssid}'
 set ${si}.encryption='${defaults?.encryption || encryption}'
 set ${si}.key='${defaults?.key || ""}'
-set ${si}.disabled='${defaults ? 0 : 1}'
+set ${si}.disabled='0'
 
 `);
 		config[name] = {};

@@ -1,6 +1,11 @@
 #!/bin/sh
 # NeonWrt first-boot UCI configuration generator.
 # Runs under systemd before netifd/neon-uci and is safe to run repeatedly.
+#
+# This script only prepares the base UCI/system configuration.
+# Network interface roles and wireless runtime are intentionally NOT managed
+# here. WAN/LAN policy belongs to platform/OpenWrt network defaults, while
+# wireless lifecycle belongs to netifd + wpad/hostapd.
 
 set -u
 
@@ -18,6 +23,7 @@ if [ ! -s /etc/board.json ]; then
 	fi
 
 	log "generating /etc/board.json"
+
 	if ! /bin/board_detect /tmp/board.json; then
 		log "board_detect failed"
 		exit 1
@@ -33,16 +39,100 @@ fi
 
 # config_generate only creates missing UCI packages and therefore preserves
 # user configuration on later boots.
+#
+# Network defaults are supplied by the normal OpenWrt platform/board scripts.
+# This script deliberately does not rewrite LAN/WAN roles.
 if ! /bin/config_generate >/dev/null; then
 	log "config_generate failed"
 	exit 1
 fi
 
+#
+# Prepare NeonWrt DHCP defaults from UCI network configuration.
+#
+# /etc/config/network is the source of truth.
+# Do not derive LAN policy from /etc/board.json here.
+#
+# Only create missing sections/options. Existing user configuration must
+# never be overwritten on subsequent boots.
+#
+
+touch /etc/config/dhcp || exit 1
+
+LAN_PROTO="$(uci -q get network.lan.proto 2>/dev/null || true)"
+
+if ! uci -q get dhcp.lan >/dev/null 2>&1; then
+	log "creating default DHCP LAN section"
+
+	uci -q batch <<'UCI_EOF' || exit 1
+set dhcp.lan='dhcp'
+set dhcp.lan.interface='lan'
+set dhcp.lan.start='100'
+set dhcp.lan.limit='150'
+set dhcp.lan.leasetime='12h'
+set dhcp.lan.domain='lan'
+UCI_EOF
+fi
+
+#
+# Only set dhcpv4 when it does not already exist.
+# This preserves changes made later through LuCI/UCI.
+#
+if ! uci -q get dhcp.lan.dhcpv4 >/dev/null 2>&1; then
+	case "$LAN_PROTO" in
+		static)
+			log "enabling DHCPv4 server for static LAN"
+			uci -q set dhcp.lan.dhcpv4='server' || exit 1
+			;;
+		*)
+			log "LAN protocol is ${LAN_PROTO:-unset}; DHCPv4 disabled"
+			uci -q set dhcp.lan.dhcpv4='disabled' || exit 1
+			;;
+	esac
+fi
+
+#
+# Initialise odhcpd's global section.
+#
+# The stock odhcpd.defaults script sees this existing section and uses its
+# migration path instead of deriving NeonWrt LAN policy from board.json.
+#
+if ! uci -q get dhcp.odhcpd >/dev/null 2>&1; then
+	log "creating default odhcpd section"
+
+	if [ -x /usr/sbin/dnsmasq ]; then
+		ODHCPDONLY=0
+	else
+		ODHCPDONLY=1
+	fi
+
+	uci -q batch <<UCI_EOF || exit 1
+set dhcp.odhcpd='odhcpd'
+set dhcp.odhcpd.maindhcp='$ODHCPDONLY'
+set dhcp.odhcpd.leasefile='/tmp/odhcpd.leases'
+set dhcp.odhcpd.leasetrigger='/usr/sbin/odhcpd-update'
+set dhcp.odhcpd.loglevel='4'
+set dhcp.odhcpd.piodir='/tmp/odhcpd-piodir'
+set dhcp.odhcpd.hostsdir='/tmp/hosts'
+UCI_EOF
+fi
+
+uci -q commit dhcp || exit 1
+
+# Wireless configuration and runtime are deliberately not handled here.
+#
+# netifd owns wireless interfaces and wpad/hostapd owns AP/authentication.
+# If a factory /etc/config/wireless must be generated, do it from the normal
+# OpenWrt Wi-Fi first-boot/defaults path rather than from this systemd-started
+# base configuration generator.
+
 # Defensive fallback: /etc/config/system is mandatory in NeonWrt because
 # neon-uci and LuCI use it as the system configuration source of truth.
 if [ ! -s /etc/config/system ]; then
 	log "system config still missing; creating minimal fallback"
+
 	touch /etc/config/system || exit 1
+
 	uci -q batch <<'UCI_EOF' || exit 1
 add system system
 set system.@system[-1].hostname='NeonWrt'
@@ -51,6 +141,7 @@ set system.@system[-1].zonename='UTC'
 set system.@system[-1].ttylogin='0'
 set system.@system[-1].log_size='128'
 set system.@system[-1].urandom_seed='0'
+
 set system.ntp='timeserver'
 set system.ntp.enabled='1'
 set system.ntp.enable_server='0'
@@ -59,6 +150,7 @@ add_list system.ntp.server='1.openwrt.pool.ntp.org'
 add_list system.ntp.server='2.openwrt.pool.ntp.org'
 add_list system.ntp.server='3.openwrt.pool.ntp.org'
 UCI_EOF
+
 	uci -q commit system || exit 1
 fi
 
@@ -66,6 +158,7 @@ fi
 # hostnamectl, D-Bus, or systemd-hostnamed. neon-uci will keep this synchronized
 # after later UCI commits.
 HOSTNAME_VALUE="$(uci -q get 'system.@system[0].hostname' 2>/dev/null || true)"
+
 if [ -n "$HOSTNAME_VALUE" ]; then
 	printf '%s\n' "$HOSTNAME_VALUE" > /etc/hostname 2>/dev/null || true
 	printf '%s\n' "$HOSTNAME_VALUE" > /proc/sys/kernel/hostname 2>/dev/null || true

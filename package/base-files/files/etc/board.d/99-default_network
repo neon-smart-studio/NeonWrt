@@ -1,15 +1,15 @@
-#
-# Copyright (C) 2013-2015 OpenWrt.org
-#
+#!/bin/sh
 
 . /lib/functions/uci-defaults.sh
 
 board_config_update
 
+# Platform-specific board scripts such as bcm27xx/02_network
+# have priority.
 json_is_a network object && exit 0
 
-ucidef_set_interface_lan 'eth0'
-[ -d /sys/class/net/eth1 ] && ucidef_set_interface_wan 'eth1'
+# Generic NeonWrt fallback for boards with eth0.
+[ -d /sys/class/net/eth0 ] && ucidef_set_interface_wan 'eth0'
 
 board_config_flush
 

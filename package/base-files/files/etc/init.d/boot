@@ -49,12 +49,17 @@ boot() {
 	grep -q pstore /proc/filesystems && /bin/mount -o nosuid,nodev,noexec,noatime -t pstore pstore /sys/fs/pstore
 	[ "$FAILSAFE" = "true" ] && touch /tmp/.failsafe
 
-	# update wifi config before additional ieee80211 hotplug events
-	# get executed because of '/sbin/kmodloader' kmod loading.
-	[ -f /etc/board.json ] && /sbin/wifi config
+	# Kernel modules are loaded earlier by neon-kmodloader.service.
+	# Generate only the initial wireless UCI configuration here. The helper
+	# waits for nl80211/PHY detection to become usable, but does NOT bring the
+	# radio up. Runtime remains owned by netifd + wpad/hostapd.
+	if [ -x /usr/libexec/neon-wifi-config ]; then
+		/usr/libexec/neon-wifi-config || \
+			echo "boot: warning: initial wireless config generation failed" >&2
+	fi
 
-	/sbin/kmodloader
-
+	# Apply one-shot factory defaults after wireless detection so the logical
+	# LAN exists before netifd starts and the generated radio is enabled as AP.
 	uci_apply_defaults
 	sync
 

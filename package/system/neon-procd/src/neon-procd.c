@@ -127,32 +127,134 @@ static bool jbool(json_object *o, const char *key)
     return json_object_get_boolean(v);
 }
 
+struct limit_map {
+    const char *procd_name;
+    const char *systemd_name;
+};
+
+static const struct limit_map limit_maps[] = {
+    { "cpu",        "LimitCPU" },
+    { "fsize",      "LimitFSIZE" },
+    { "data",       "LimitDATA" },
+    { "stack",      "LimitSTACK" },
+    { "core",       "LimitCORE" },
+    { "rss",        "LimitRSS" },
+    { "nofile",     "LimitNOFILE" },
+    { "as",         "LimitAS" },
+    { "nproc",      "LimitNPROC" },
+    { "memlock",    "LimitMEMLOCK" },
+    { "locks",      "LimitLOCKS" },
+    { "sigpending", "LimitSIGPENDING" },
+    { "msgqueue",   "LimitMSGQUEUE" },
+    { "nice",       "LimitNICE" },
+    { "rtprio",     "LimitRTPRIO" },
+    { "rttime",     "LimitRTTIME" },
+    { NULL, NULL }
+};
+
+static const char *limit_property(const char *name)
+{
+    if (!name) return NULL;
+
+    for (size_t i = 0; limit_maps[i].procd_name; i++) {
+        if (!strcmp(name, limit_maps[i].procd_name))
+            return limit_maps[i].systemd_name;
+    }
+
+    return NULL;
+}
+
+static void normalize_limit_token(const char *in, char *out, size_t outsz)
+{
+    if (!in || !*in) {
+        snprintf(out, outsz, "infinity");
+        return;
+    }
+
+    if (!strcasecmp(in, "unlimited") || !strcasecmp(in, "infinity")) {
+        snprintf(out, outsz, "infinity");
+        return;
+    }
+
+    snprintf(out, outsz, "%s", in);
+}
+
+static void normalize_limit_value(const char *value, char *out, size_t outsz)
+{
+    char buf[256];
+    char soft[128];
+    char hard[128];
+
+    if (!value) value = "";
+
+    snprintf(buf, sizeof(buf), "%s", value);
+
+    char *p = buf;
+    while (*p && isspace((unsigned char)*p))
+        p++;
+
+    char *end = p + strlen(p);
+    while (end > p && isspace((unsigned char)end[-1]))
+        *--end = '\0';
+
+    /*
+     * procd accepts either a single value:
+     *
+     *     "unlimited"
+     *     "1024"
+     *
+     * or a soft/hard pair:
+     *
+     *     "1024 4096"
+     *     "unlimited unlimited"
+     *
+     * systemd wants the pair as "soft:hard" and spells unlimited as
+     * "infinity".
+     */
+    char *sep = strpbrk(p, " \t:");
+    if (!sep) {
+        normalize_limit_token(p, out, outsz);
+        return;
+    }
+
+    *sep++ = '\0';
+    while (*sep && (isspace((unsigned char)*sep) || *sep == ':'))
+        sep++;
+
+    char *second_end = sep + strlen(sep);
+    while (second_end > sep && isspace((unsigned char)second_end[-1]))
+        *--second_end = '\0';
+
+    normalize_limit_token(p, soft, sizeof(soft));
+    normalize_limit_token(*sep ? sep : p, hard, sizeof(hard));
+    snprintf(out, outsz, "%s:%s", soft, hard);
+}
+
 static void add_limits(char **argv, int *argc, json_object *limits)
 {
-    if (!limits || !json_object_is_type(limits, json_type_object)) return;
+    if (!limits || !json_object_is_type(limits, json_type_object))
+        return;
+
     struct json_object_iterator it = json_object_iter_begin(limits);
     struct json_object_iterator end = json_object_iter_end(limits);
-    for (; !json_object_iter_equal(&it, &end); json_object_iter_next(&it)) {
-        const char *k = json_object_iter_peek_name(&it);
-        json_object *v = json_object_iter_peek_value(&it);
-        const char *val = json_object_get_string(v);
-        const char *prop = NULL;
-        if (!strcmp(k, "core")) prop = "LimitCORE";
-        else if (!strcmp(k, "nofile")) prop = "LimitNOFILE";
-        else if (!strcmp(k, "nproc")) prop = "LimitNPROC";
-        else if (!strcmp(k, "as")) prop = "LimitAS";
-        else if (!strcmp(k, "memlock")) prop = "LimitMEMLOCK";
-        else if (!strcmp(k, "stack")) prop = "LimitSTACK";
-        if (!prop) continue;
 
-        char tmp[128];
-        const char *sp = strchr(val, ' ');
-        if (sp) {
-            size_t a = (size_t)(sp - val);
-            while (*sp == ' ') sp++;
-            snprintf(tmp, sizeof(tmp), "%.*s:%s", (int)a, val, sp);
-            add_prop(argv, argc, prop, tmp);
-        } else add_prop(argv, argc, prop, val);
+    for (; !json_object_iter_equal(&it, &end); json_object_iter_next(&it)) {
+        const char *name = json_object_iter_peek_name(&it);
+        json_object *value_obj = json_object_iter_peek_value(&it);
+        const char *prop = limit_property(name);
+
+        if (!prop) {
+            fprintf(stderr,
+                    "neon-procd: warning: unsupported resource limit '%s'\n",
+                    name ? name : "(null)");
+            continue;
+        }
+
+        const char *value = json_object_get_string(value_obj);
+        char normalized[256];
+        normalize_limit_value(value, normalized, sizeof(normalized));
+
+        add_prop(argv, argc, prop, normalized);
     }
 }
 
@@ -221,6 +323,13 @@ static int start_instance(const char *service, const char *iname, json_object *i
     json_object *limits = NULL;
     if (json_object_object_get_ex(inst, "limits", &limits)) add_limits(argv, &argc, limits);
 
+    /*
+     * OpenWrt init scripts assume the traditional system PATH.  A transient
+     * service must not depend on whatever PATH happened to be inherited by
+     * neon-procd/systemd-run, so provide a deterministic default.  An
+     * explicit procd env PATH overrides this default.
+     */
+    bool have_path = false;
     json_object *env = NULL;
     if (json_object_object_get_ex(inst, "env", &env) && json_object_is_type(env, json_type_object)) {
         struct json_object_iterator it = json_object_iter_begin(env);
@@ -228,12 +337,22 @@ static int start_instance(const char *service, const char *iname, json_object *i
         for (; !json_object_iter_equal(&it, &end); json_object_iter_next(&it)) {
             const char *k = json_object_iter_peek_name(&it);
             const char *v = json_object_get_string(json_object_iter_peek_value(&it));
+
+            if (k && !strcmp(k, "PATH"))
+                have_path = true;
+
             char *kv = NULL;
             if (asprintf(&kv, "%s=%s", k, v) < 0) die("out of memory");
             add_arg(argv, &argc, "--setenv");
             if (argc >= MAX_ARGS - 1) die("too many arguments");
-            argv[argc++] = kv; argv[argc] = NULL;
+            argv[argc++] = kv;
+            argv[argc] = NULL;
         }
+    }
+
+    if (!have_path) {
+        add_arg(argv, &argc, "--setenv");
+        add_arg(argv, &argc, "PATH=/usr/sbin:/usr/bin:/sbin:/bin");
     }
 
     warn_unsupported(inst);
@@ -403,46 +522,200 @@ static int cmd_signal_json(void)
     char *argv[]={"systemctl","kill",sigarg,unit,NULL}; int rc=runv(argv,true); json_object_put(o); return rc;
 }
 
-static void execute_argv(json_object *a)
+static void execute_argv_slice(json_object *a, int start)
 {
-    if (!a || !json_object_is_type(a, json_type_array)) return;
+    if (!a || !json_object_is_type(a, json_type_array))
+        return;
+
     int n = (int)json_object_array_length(a);
-    if (n < 1 || n >= MAX_ARGS) return;
+    if (start < 0 || start >= n || n - start >= MAX_ARGS)
+        return;
+
     char *argv[MAX_ARGS] = {0};
-    for (int i = 0; i < n; i++)
-        argv[i] = (char *)json_object_get_string(json_object_array_get_idx(a, i));
-    argv[n] = NULL;
-    (void)runv(argv, false);
+    int argc = 0;
+
+    for (int i = start; i < n; i++) {
+        json_object *v = json_object_array_get_idx(a, i);
+        if (!v)
+            return;
+        argv[argc++] = (char *)json_object_get_string(v);
+    }
+    argv[argc] = NULL;
+
+    if (argc > 0)
+        (void)runv(argv, false);
 }
 
-static void inspect_trigger(json_object *tr, const char *etype, const char *package, const char *iface)
+/*
+ * procd trigger expressions generated by procd.sh have this shape:
+ *
+ *   [ "config.change",
+ *     [ "if",
+ *       [ "eq", "package", "firewall" ],
+ *       [ "run_script", "/etc/init.d/firewall", "reload" ] ] ]
+ *
+ * and interface triggers are identical except that the condition key is
+ * "interface" and the event pattern is usually "interface.*".
+ *
+ * Raw triggers may wrap one or more action expressions in another array:
+ *
+ *   [ "event.name", [ [ "run_script", ... ] ], timeout ]
+ *
+ * Keep the evaluator generic enough for all of those forms instead of
+ * assuming that tr[1] is always an array *of* rules.
+ */
+static const char *event_data_value(json_object *data, const char *key)
 {
-    if(!json_object_is_type(tr,json_type_array) || json_object_array_length(tr)<2)return;
-    const char *pat=json_object_get_string(json_object_array_get_idx(tr,0)); if(!pat || fnmatch(pat,etype,0))return;
-    json_object *rules=json_object_array_get_idx(tr,1); if(!json_object_is_type(rules,json_type_array))return;
-    int nr=(int)json_object_array_length(rules);
-    for(int i=0;i<nr;i++) {
-        json_object *r=json_object_array_get_idx(rules,i); if(!json_object_is_type(r,json_type_array)||json_object_array_length(r)<1)continue;
-        const char *op=json_object_get_string(json_object_array_get_idx(r,0));
-        if(op && !strcmp(op,"if") && json_object_array_length(r)>=3) {
-            json_object *cond=json_object_array_get_idx(r,1), *act=json_object_array_get_idx(r,2); bool ok=true;
-            if(json_object_is_type(cond,json_type_array)&&json_object_array_length(cond)>=3) {
-                const char *cmp=json_object_get_string(json_object_array_get_idx(cond,0)); const char *key=json_object_get_string(json_object_array_get_idx(cond,1)); const char *val=json_object_get_string(json_object_array_get_idx(cond,2));
-                if(cmp && !strcmp(cmp,"eq")) { if(key&&!strcmp(key,"package")) ok=package&&val&&!strcmp(package,val); else if(key&&!strcmp(key,"interface")) ok=iface&&val&&!strcmp(iface,val); }
-            }
-            if(ok && json_object_is_type(act,json_type_array) && json_object_array_length(act)>=2 && !strcmp(json_object_get_string(json_object_array_get_idx(act,0)),"run_script")) execute_argv(json_object_array_get_idx(act,1));
-        } else if(op && !strcmp(op,"run_script") && json_object_array_length(r)>=2) execute_argv(json_object_array_get_idx(r,1));
+    json_object *v = NULL;
+
+    if (!data || !key || !json_object_is_type(data, json_type_object))
+        return NULL;
+    if (!json_object_object_get_ex(data, key, &v) || !v)
+        return NULL;
+
+    return json_object_get_string(v);
+}
+
+static bool eval_condition(json_object *cond, json_object *data)
+{
+    if (!cond || !json_object_is_type(cond, json_type_array) ||
+        json_object_array_length(cond) < 1)
+        return false;
+
+    const char *op = json_object_get_string(json_object_array_get_idx(cond, 0));
+    if (!op)
+        return false;
+
+    if ((!strcmp(op, "eq") || !strcmp(op, "ne")) &&
+        json_object_array_length(cond) >= 3) {
+        const char *key = json_object_get_string(json_object_array_get_idx(cond, 1));
+        const char *want = json_object_get_string(json_object_array_get_idx(cond, 2));
+        const char *got = event_data_value(data, key);
+        bool equal = got && want && !strcmp(got, want);
+        return !strcmp(op, "eq") ? equal : !equal;
     }
+
+    if (!strcmp(op, "and")) {
+        int n = (int)json_object_array_length(cond);
+        for (int i = 1; i < n; i++)
+            if (!eval_condition(json_object_array_get_idx(cond, i), data))
+                return false;
+        return true;
+    }
+
+    if (!strcmp(op, "or")) {
+        int n = (int)json_object_array_length(cond);
+        for (int i = 1; i < n; i++)
+            if (eval_condition(json_object_array_get_idx(cond, i), data))
+                return true;
+        return false;
+    }
+
+    if (!strcmp(op, "not") && json_object_array_length(cond) >= 2)
+        return !eval_condition(json_object_array_get_idx(cond, 1), data);
+
+    return false;
+}
+
+static void execute_trigger_expr(json_object *expr, json_object *data)
+{
+    if (!expr || !json_object_is_type(expr, json_type_array) ||
+        json_object_array_length(expr) < 1)
+        return;
+
+    json_object *first = json_object_array_get_idx(expr, 0);
+
+    /* A raw trigger can contain a list of action expressions. */
+    if (first && json_object_is_type(first, json_type_array)) {
+        int n = (int)json_object_array_length(expr);
+        for (int i = 0; i < n; i++)
+            execute_trigger_expr(json_object_array_get_idx(expr, i), data);
+        return;
+    }
+
+    const char *op = first ? json_object_get_string(first) : NULL;
+    if (!op)
+        return;
+
+    if (!strcmp(op, "run_script")) {
+        /* argv is stored directly after the opcode, not in a nested array. */
+        execute_argv_slice(expr, 1);
+        return;
+    }
+
+    if (!strcmp(op, "if") && json_object_array_length(expr) >= 3) {
+        json_object *cond = json_object_array_get_idx(expr, 1);
+        json_object *action = json_object_array_get_idx(expr, 2);
+        if (eval_condition(cond, data))
+            execute_trigger_expr(action, data);
+        return;
+    }
+}
+
+static void inspect_trigger(json_object *tr, const char *etype, json_object *data)
+{
+    if (!tr || !etype || !json_object_is_type(tr, json_type_array) ||
+        json_object_array_length(tr) < 2)
+        return;
+
+    const char *pattern = json_object_get_string(json_object_array_get_idx(tr, 0));
+    if (!pattern || fnmatch(pattern, etype, 0) != 0)
+        return;
+
+    execute_trigger_expr(json_object_array_get_idx(tr, 1), data);
 }
 
 static int cmd_event(void)
 {
-    char *text=read_stdin_all(); json_object *ev=json_tokener_parse(text); free(text); if(!ev)return 1;
-    const char *etype=jstr(ev,"type"), *package=NULL, *iface=NULL; json_object *data=NULL;
-    if(json_object_object_get_ex(ev,"data",&data)&&json_object_is_type(data,json_type_object)){package=jstr(data,"package");iface=jstr(data,"interface");}
-    if(!etype){json_object_put(ev);return 1;} ensure_registry(); DIR *d=opendir(REGISTRY_DIR); if(!d){json_object_put(ev);return 0;} struct dirent *de;
-    while((de=readdir(d))){size_t l=strlen(de->d_name);if(l<6||strcmp(de->d_name+l-5,".json"))continue;char p[512];snprintf(p,sizeof(p),REGISTRY_DIR "/%s",de->d_name);json_object *root=read_json_file(p),*trs=NULL;if(root&&json_object_object_get_ex(root,"triggers",&trs)&&json_object_is_type(trs,json_type_array)){int n=(int)json_object_array_length(trs);for(int i=0;i<n;i++)inspect_trigger(json_object_array_get_idx(trs,i),etype,package,iface);}if(root)json_object_put(root);}
-    closedir(d); json_object_put(ev); return 0;
+    char *text = read_stdin_all();
+    json_object *ev = json_tokener_parse(text);
+    free(text);
+    if (!ev)
+        return 1;
+
+    const char *etype = jstr(ev, "type");
+    json_object *data = NULL;
+    if (!etype) {
+        json_object_put(ev);
+        return 1;
+    }
+
+    if (!json_object_object_get_ex(ev, "data", &data) ||
+        !json_object_is_type(data, json_type_object))
+        data = NULL;
+
+    ensure_registry();
+    DIR *d = opendir(REGISTRY_DIR);
+    if (!d) {
+        json_object_put(ev);
+        return 0;
+    }
+
+    struct dirent *de;
+    while ((de = readdir(d))) {
+        size_t l = strlen(de->d_name);
+        if (l < 6 || strcmp(de->d_name + l - 5, ".json"))
+            continue;
+
+        char path[512];
+        snprintf(path, sizeof(path), REGISTRY_DIR "/%s", de->d_name);
+
+        json_object *root = read_json_file(path);
+        json_object *triggers = NULL;
+        if (root && json_object_object_get_ex(root, "triggers", &triggers) &&
+            json_object_is_type(triggers, json_type_array)) {
+            int n = (int)json_object_array_length(triggers);
+            for (int i = 0; i < n; i++)
+                inspect_trigger(json_object_array_get_idx(triggers, i), etype, data);
+        }
+
+        if (root)
+            json_object_put(root);
+    }
+
+    closedir(d);
+    json_object_put(ev);
+    return 0;
 }
 
 int main(int argc, char **argv)
