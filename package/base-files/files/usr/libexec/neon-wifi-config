@@ -1,0 +1,85 @@
+#!/bin/sh
+# NeonWrt initial Wi-Fi UCI generator.
+#
+# Generates /etc/config/wireless only.
+# Runtime Wi-Fi ownership belongs to netifd + wpad/hostapd.
+
+log() {
+	printf '%s\n' "neon-wifi-config: $*" >&2
+}
+
+[ -x /sbin/wifi ] || {
+	log "/sbin/wifi is missing"
+	exit 1
+}
+
+[ -r /etc/board.json ] || {
+	log "/etc/board.json is missing"
+	exit 1
+}
+
+# Preserve an existing wireless configuration.
+if uci -q show wireless 2>/dev/null | grep -q '=wifi-device'; then
+	exit 0
+fi
+
+# Ensure wifi-detect.uc has a wlan object to populate.
+. /usr/share/libubox/jshn.sh
+
+json_init
+if json_load "$(cat /etc/board.json 2>/dev/null)"; then
+	if ! json_is_a wlan object; then
+		json_add_object wlan
+		json_close_object
+
+		tmp="/tmp/board.json.neon-wifi.$$"
+
+		if json_dump > "$tmp"; then
+			mv "$tmp" /etc/board.json
+		else
+			rm -f "$tmp"
+			log "failed to update /etc/board.json"
+			exit 1
+		fi
+	fi
+else
+	log "failed to parse /etc/board.json"
+	exit 1
+fi
+
+attempt=1
+max_attempts=10
+
+while [ "$attempt" -le "$max_attempts" ]; do
+	have_phy=0
+
+	for phy in /sys/class/ieee80211/phy*; do
+		[ -e "$phy" ] || continue
+		have_phy=1
+		break
+	done
+
+	if [ "$have_phy" -eq 1 ]; then
+		log "detecting wireless hardware (attempt $attempt/$max_attempts)"
+
+		/sbin/wifi config >/tmp/neon-wifi-config.log 2>&1
+		rc=$?
+
+		if uci -q show wireless 2>/dev/null | grep -q '=wifi-device'; then
+			log "wireless UCI configuration generated"
+			exit 0
+		fi
+
+		log "wifi config returned $rc"
+	fi
+
+	attempt=$((attempt + 1))
+	sleep 1
+done
+
+log "wireless PHY exists but /etc/config/wireless was not generated"
+
+[ -s /tmp/neon-wifi-config.log ] &&
+	cat /tmp/neon-wifi-config.log >&2
+
+exit 1

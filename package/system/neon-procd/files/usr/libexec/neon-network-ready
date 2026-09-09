@@ -1,0 +1,29 @@
+#!/bin/sh
+
+TIMEOUT=30
+INTERVAL=1
+COUNT=0
+
+while [ "$COUNT" -lt "$TIMEOUT" ]; do
+	STATUS="$(ubus call network.interface.lan status 2>/dev/null)"
+
+	UP="$(printf '%s\n' "$STATUS" | jsonfilter -e '@.up' 2>/dev/null)"
+	DEV="$(printf '%s\n' "$STATUS" | jsonfilter -e '@.device' 2>/dev/null)"
+
+	if [ "$UP" = "true" ] && [ "$DEV" = "br-lan" ]; then
+		logger -t neon-network-ready "LAN ready on br-lan"
+
+		# Network-dependent services must be regenerated after netifd
+		# has resolved the real interface devices.
+		/etc/init.d/dnsmasq restart
+		/etc/init.d/firewall restart
+
+		exit 0
+	fi
+
+	sleep "$INTERVAL"
+	COUNT=$((COUNT + 1))
+done
+
+logger -t neon-network-ready "timeout waiting for LAN readiness"
+exit 1

@@ -1,0 +1,22 @@
+NeonWrt neon-rc boot semantics fix
+==================================
+
+Native OpenWrt invokes its rc.d boot sequence as:
+
+    /etc/init.d/rcS S boot
+
+and shutdown as:
+
+    /etc/init.d/rcS K shutdown
+
+The previous NeonWrt neon-rc translated both "boot" and "start" into the
+"start" action. This meant init scripts which define a dedicated boot()
+function, especially /etc/init.d/boot, never executed their boot logic.
+Consequences included uci_apply_defaults not running and initial Wi-Fi UCI
+configuration not being generated.
+
+This version preserves boot/start and shutdown/stop as distinct actions.
+rc.common already provides the correct fallback semantics:
+
+    boot()     -> start()
+    shutdown() -> stop()

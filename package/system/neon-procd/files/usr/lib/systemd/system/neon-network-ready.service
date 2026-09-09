@@ -1,0 +1,13 @@
+[Unit]
+Description=Wait for NeonWrt LAN readiness
+After=neon-procd-ubus.service neon-procd-network-instance1.service
+Requires=neon-procd-ubus.service neon-procd-network-instance1.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/neon-network-ready
+RemainAfterExit=yes
+TimeoutStartSec=45
+
+[Install]
+WantedBy=multi-user.target
