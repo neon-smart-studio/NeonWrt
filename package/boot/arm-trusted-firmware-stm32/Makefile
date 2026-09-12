@@ -49,9 +49,16 @@ define Trusted-Firmware-A/stm32mp157c-dk2-scmi
   NAME:=STM32MP157C-DK2 (SCMI)
 endef
 
+define Trusted-Firmware-A/stm32mp157c-odyssey
+  $(call Trusted-Firmware-A/stm32mp1)
+  NAME:=Seeed Odyssey STM32MP157C
+  DTB_FILE_NAME=stm32mp157c-odyssey.dtb
+endef
+
 TFA_TARGETS := stm32mp135f-dk \
 	       stm32mp157c-dk2 \
-	       stm32mp157c-dk2-scmi
+	       stm32mp157c-dk2-scmi \
+	       stm32mp157c-odyssey
 
 TFA_MAKE_FLAGS += \
 		ARCH=aarch32 AARCH32_SP=optee \

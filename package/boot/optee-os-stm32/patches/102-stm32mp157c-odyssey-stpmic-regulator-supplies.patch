@@ -1,0 +1,45 @@
+diff --git a/core/arch/arm/dts/stm32mp157c-odyssey-som.dtsi b/core/arch/arm/dts/stm32mp157c-odyssey-som.dtsi
+--- a/core/arch/arm/dts/stm32mp157c-odyssey-som.dtsi
++++ b/core/arch/arm/dts/stm32mp157c-odyssey-som.dtsi
+@@ -19,6 +19,14 @@
+ 		device_type = "memory";
+ 		reg = <0xc0000000 0x20000000>;
+ 	};
++
++	vin: vin {
++		compatible = "regulator-fixed";
++		regulator-name = "vin";
++		regulator-min-microvolt = <5000000>;
++		regulator-max-microvolt = <5000000>;
++		regulator-always-on;
++	};
+ };
+ 
+ &i2c2 {
+@@ -41,9 +49,18 @@
+ 
+ 		regulators {
+ 			compatible = "st,stpmic1-regulators";
++			buck1-supply = <&vin>;
++			buck2-supply = <&vin>;
++			buck3-supply = <&vin>;
++			buck4-supply = <&vin>;
+ 			ldo1-supply = <&v3v3>;
++			ldo2-supply = <&vin>;
+ 			ldo3-supply = <&vdd_ddr>;
++			ldo4-supply = <&vin>;
++			ldo5-supply = <&vin>;
+ 			ldo6-supply = <&v3v3>;
++			vref_ddr-supply = <&vin>;
++			boost-supply = <&vin>;
+ 			pwr_sw1-supply = <&bst_out>;
+ 			pwr_sw2-supply = <&bst_out>;
+ 
+@@ -111,6 +128,7 @@
+ 			vdd_usb: ldo4 {
+ 				regulator-name = "vdd_usb";
+ 				interrupts = <IT_CURLIM_LDO4 0>;
++				regulator-always-on;
+ 			};
+ 
+ 			vdda: ldo5 {

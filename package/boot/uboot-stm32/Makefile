@@ -51,10 +51,17 @@ define U-Boot/stm32mp157c-dk2-scmi
   DEVICE_TREE:=stm32mp157c-dk2-scmi
 endef
 
+define U-Boot/stm32mp157c-odyssey
+  $(call U-Boot/stm32mp15)
+  NAME:=Seeed Odyssey STM32MP157C
+  DEVICE_TREE:=stm32mp157c-odyssey
+endef
+
 UBOOT_TARGETS := \
 		 stm32mp135f-dk \
 		 stm32mp157c-dk2 \
-		 stm32mp157c-dk2-scmi
+		 stm32mp157c-dk2-scmi \
+		 stm32mp157c-odyssey
 
 UBOOT_MAKE_FLAGS += DEVICE_TREE=st/$(DEVICE_TREE)
 

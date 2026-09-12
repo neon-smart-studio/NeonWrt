@@ -9,7 +9,21 @@ include $(INCLUDE_DIR)/image.mk
 define Build/boot-img-ext4
 	rm -fR $@.boot
 	mkdir -p $@.boot
-	$(foreach dts,$(DEVICE_DTS), $(CP) $(KDIR)/image-$(dts).dtb $@.boot/$(dts).dtb;)
+
+	# Base DTB
+	$(foreach dts,$(DEVICE_DTS), \
+		$(CP) $(KDIR)/image-$(dts).dtb $@.boot/$(dts).dtb;)
+
+	# Optional DT overlays. These are built by the Linux Kbuild dtbs target,
+	# not compiled here.
+	$(if $(DEVICE_DTBO), \
+		$(INSTALL_DIR) $@.boot/overlays; \
+		$(foreach dtbo,$(DEVICE_DTBO), \
+			$(CP) $(LINUX_DIR)/arch/arm/boot/dts/st/$(dtbo).dtbo \
+				$@.boot/overlays/$(dtbo).dtbo; \
+		) \
+	)
+
 	$(CP) $(IMAGE_KERNEL) $@.boot/$(KERNEL_IMG)
 	$(INSTALL_DIR) $@.boot/extlinux
 	$(CP) ./extlinux.conf $@.boot/extlinux/
@@ -73,8 +87,29 @@ define Device/stm32mp157c-dk2-scmi
 		       st,stm32mp157f-dk2-scmi
 endef
 
+# Seeed Studio Odyssey STM32MP157C
+# DTBOs are built by Linux Kbuild and merely packaged by boot-img-ext4.
+define Device/stm32mp157c-odyssey
+  DEVICE_VENDOR := Seeed Studio
+  DEVICE_MODEL := Odyssey STM32MP157C
+  DEVICE_DTS := stm32mp157c-odyssey
+  SUPPORTED_DEVICES := seeed,stm32mp157c-odyssey \
+		       seeed,npi-stm32mp1
+
+  DEVICE_DTBO := \
+	stm32mp1-seeed-lcd-01-overlay \
+	stm32mp1-seeed-pwm-overlay \
+	stm32mp1-seeed-spi5-overlay \
+	stm32mp1-seeed-uart7-overlay \
+	stm32mp1-seeed-usart2-overlay \
+	stm32mp1-seeed-i2c4-overlay \
+	stm32mp1-seeed-ap6236-overlay \
+	stm32mp1-MCP2517FD-can0-overlay
+endef
+
 TARGET_DEVICES += stm32mp135f-dk \
 		  stm32mp157c-dk2 \
-		  stm32mp157c-dk2-scmi
+		  stm32mp157c-dk2-scmi \
+		  stm32mp157c-odyssey
 
 $(eval $(call BuildImage))

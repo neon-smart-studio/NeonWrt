@@ -46,10 +46,17 @@ define Optee-os/stm32mp157c-dk2-scmi
   PLAT_FLAVOR:=157C_DK2_SCMI
 endef
 
+define Optee-os/stm32mp157c-odyssey
+  $(call Optee-os/stm32mp1)
+  NAME:=Seeed Odyssey STM32MP157C
+  PLAT_FLAVOR:=157C_ODYSSEY
+endef
+
 OPTEE_TARGETS := \
 		 stm32mp135f-dk \
 		 stm32mp157c-dk2 \
-		 stm32mp157c-dk2-scmi
+		 stm32mp157c-dk2-scmi \
+     stm32mp157c-odyssey
 
 define Package/optee-os/install/default
 endef

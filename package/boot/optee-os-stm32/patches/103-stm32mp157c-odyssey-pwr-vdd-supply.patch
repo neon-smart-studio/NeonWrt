@@ -1,0 +1,15 @@
+diff --git a/core/arch/arm/dts/stm32mp157c-odyssey-som.dtsi b/core/arch/arm/dts/stm32mp157c-odyssey-som.dtsi
+index 885e88d..a5adcb4 100644
+--- a/core/arch/arm/dts/stm32mp157c-odyssey-som.dtsi
++++ b/core/arch/arm/dts/stm32mp157c-odyssey-som.dtsi
+@@ -183,6 +183,10 @@
+ 	};
+ };
+ 
++&pwr_regulators {
++	vdd-supply = <&vdd>;
++};
++
+ &rng1 {
+ 	status = "okay";
+ };

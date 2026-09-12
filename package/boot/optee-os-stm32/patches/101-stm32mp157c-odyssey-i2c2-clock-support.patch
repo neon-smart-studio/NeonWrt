@@ -1,0 +1,46 @@
+diff --git a/core/arch/arm/plat-stm32mp1/conf.mk b/core/arch/arm/plat-stm32mp1/conf.mk
+--- a/core/arch/arm/plat-stm32mp1/conf.mk
++++ b/core/arch/arm/plat-stm32mp1/conf.mk
+@@ -1,4 +1,5 @@
+ CFG_STM32_HASH ?= y
+ CFG_STM32_I2C ?= y
++CFG_WITH_NSEC_I2CS ?= y
+ CFG_STM32_IWDG ?= y
+ CFG_STM32_PKA ?= y
+diff --git a/core/drivers/clk/clk-stm32mp15.c b/core/drivers/clk/clk-stm32mp15.c
+--- a/core/drivers/clk/clk-stm32mp15.c
++++ b/core/drivers/clk/clk-stm32mp15.c
+@@ -1,5 +1,6 @@
+ enum stm32mp1_parent_sel {
+ 	_STGEN_SEL,
++	_I2C12_SEL,
+ 	_I2C35_SEL,
+ 	_I2C46_SEL,
+ 	_SPI6_SEL,
+@@ -1,5 +1,8 @@
+ 	/* Non-secure clocks */
+ #ifdef CFG_WITH_NSEC_I2CS
++	_CLK_SC_SELEC(N_S, RCC_MP_APB1ENSETR, 21, I2C1_K, _I2C12_SEL),
++	_CLK_SC_SELEC(N_S, RCC_MP_APB1ENSETR, 22, I2C2_K, _I2C12_SEL),
++	_CLK_SC_SELEC(N_S, RCC_MP_APB1ENSETR, 23, I2C3_K, _I2C35_SEL),
+ 	_CLK_SC2_SELEC(N_S, RCC_MP_APB1ENSETR, I2C5EN, I2C5_K, _I2C35_SEL),
+ #endif
+ 
+@@ -1,4 +1,10 @@
+ /* Parents for (some) non-secure clocks */
++#ifdef CFG_WITH_NSEC_I2CS
++static const uint8_t i2c12_parents[] = {
++	_PCLK1, _PLL4_R, _HSI_KER, _CSI_KER
++};
++#endif
++
+ #ifdef CFG_WITH_NSEC_UARTS
+ static const uint8_t uart6_parents[] = {
+ 	_PCLK2, _PLL4_Q, _HSI_KER, _CSI_KER, _HSE_KER
+@@ -1,5 +1,6 @@
+ 	/* Always non-secure clocks (maybe used in some way in secure world) */
+ #ifdef CFG_WITH_NSEC_I2CS
++	_CLK_PARENT(_I2C12_SEL, RCC_I2C12CKSELR, 0, 0x7, i2c12_parents),
+ 	_CLK_PARENT(_I2C35_SEL, RCC_I2C35CKSELR, 0, 0x7, i2c35_parents),
+ #endif
+ #ifdef CFG_WITH_NSEC_UARTS
