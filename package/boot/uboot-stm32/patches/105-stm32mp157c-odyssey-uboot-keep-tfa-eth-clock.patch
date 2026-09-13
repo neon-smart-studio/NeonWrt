@@ -1,0 +1,6 @@
+--- a/dts/upstream/src/arm/st/stm32mp157c-odyssey.dts
++++ b/dts/upstream/src/arm/st/stm32mp157c-odyssey.dts
+@@ -39,3 +39,0 @@
+-	assigned-clocks = <&rcc ETHCK_K>, <&rcc PLL4_P>;
+-	assigned-clock-parents = <&rcc PLL4_P>;
+-	assigned-clock-rates = <125000000>; /* Clock PLL4 to 750Mhz in ATF/U-Boot */
