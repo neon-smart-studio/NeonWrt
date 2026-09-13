@@ -4,31 +4,35 @@ NeonWrt – 基於 Systemd 的 OpenWrt 發行版
 * Targeted at Rockchip, Orange Pi, x86 SBCs, and IoT edge routers
 * Full modular system with custom hostapd/dnsmasq/netifd support
 
-如何使用
-git clone https://github.com/neon-smart-studio/NeonWrt
-cd NeonWrt
+**Open Networks. Brighter Possibilities.**
 
-make menuconfig //選取你要的板子如樹霉派
-![image](https://github.com/user-attachments/assets/89304293-4d9d-49c8-929f-0d4f7766e7b7)
-![image](https://github.com/user-attachments/assets/7bc7e7d2-4bae-40c2-918c-f299508d5c68)
-![image](https://github.com/user-attachments/assets/7003623c-718a-4ac9-b657-a6a7b490ce5c)
+NeonWrt 是一個以 **OpenWrt 為基礎、以 systemd 為核心重新整合的 Linux 網路作業系統／衍生發行版**。
 
-在advance devolpers options打勾
-![image](https://github.com/user-attachments/assets/7b9ff821-e716-4080-ba1c-4233be046526)
+NeonWrt 並非單純替 OpenWrt 更換 init system，而是希望在保留 OpenWrt 成熟的 **UCI、ubus、netifd、LuCI、fw4 與套件生態**的同時，引入 systemd 的服務管理與現代 Linux userspace 架構。
 
-進去advance devolpers options頁面勾選toolchain options
-![image](https://github.com/user-attachments/assets/2760495c-b102-4edd-b583-ee6f692f38ca)
+為了銜接兩種不同的服務模型，NeonWrt 開發自己的 **neon-procd compatibility layer**，讓既有 OpenWrt `USE_PROCD` 服務能夠在 systemd 環境中運作，降低既有 OpenWrt 軟體移植至 NeonWrt 的成本。
 
-進去toolchain options頁面選取C Lib為glibc
-![image](https://github.com/user-attachments/assets/f7294b1d-c584-42b1-9f7e-0242bd1fe1e2)
+### 核心方向
 
-Exit後儲存
+* **systemd 作為 PID 1**
+* **neon-procd** — OpenWrt procd → systemd 相容層
+* 保留 **UCI / ubus / netifd**
+* 支援 **LuCI Web Interface**
+* 保留 **fw4 / nftables** 網路防火牆架構
+* 延續 OpenWrt 套件與硬體支援生態
+* 持續追蹤 OpenWrt upstream 更新
+* 建立兼具 OpenWrt 彈性與現代 Linux userspace 的網路系統
 
-make -j28 V=99
-等待大概半小時到一小時
+NeonWrt 的目標不是取代 OpenWrt，而是在 OpenWrt 成熟的嵌入式網路平台之上，探索另一條系統架構路線。
 
-在bin/targets/<你選的架構>/bcm2711-glibc
-![image](https://github.com/user-attachments/assets/ea28eba8-662c-4255-b204-1ad5f111457c)
+**Freedom · Flexibility · Beyond**
 
-跑出來的結果(ssh)
-![image](https://github.com/user-attachments/assets/79e5be19-599f-4753-b7e8-1ba7f041af0e)
+主要修改
+package/base-files
+package/boot/arm-trusted-firmware-stm32
+package/boot/optee-os-stm32
+package/boot/uboot-stm32
+package/system/neon-procd
+package/system/neon-uci
+package/system/systemd
+target/linux/stm32 (image + patches-6.12)
