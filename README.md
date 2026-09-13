@@ -27,12 +27,20 @@ NeonWrt 的目標不是取代 OpenWrt，而是在 OpenWrt 成熟的嵌入式網�
 
 **Freedom · Flexibility · Beyond**
 
-主要修改
+主要新增與修改
+
 package/base-files
+
 package/boot/arm-trusted-firmware-stm32
+
 package/boot/optee-os-stm32
+
 package/boot/uboot-stm32
+
 package/system/neon-procd
+
 package/system/neon-uci
+
 package/system/systemd
+
 target/linux/stm32 (image + patches-6.12)
