@@ -19,11 +19,22 @@ PKG_LICENSE:=MIT
 PKG_LICENSE_FILES:=COPYING
 PKG_MAINTAINER:=Jeffery To <jeffery.to@gmail.com>
 
-PKG_BUILD_DEPENDS:=python-hatchling/host python-hatch-vcs/host
+PKG_BUILD_DEPENDS:= \
+	python-hatchling/host \
+	python-hatch-vcs/host
+
+HOST_BUILD_DEPENDS:= \
+	python3/host \
+	python-hatchling/host \
+	python-hatch-vcs/host \
+	python-referencing/host
 
 include ../pypi.mk
 include $(INCLUDE_DIR)/package.mk
+include $(INCLUDE_DIR)/host-build.mk
 include ../python3-package.mk
+include ../python3-host-build.mk
+
 
 define Package/python3-jsonschema-specifications
   SECTION:=lang
@@ -31,8 +42,11 @@ define Package/python3-jsonschema-specifications
   SUBMENU:=Python
   TITLE:=JSON Schema meta-schemas and vocabularies
   URL:=https://github.com/python-jsonschema/jsonschema-specifications
-  DEPENDS:=+python3-light +python3-referencing
+  DEPENDS:= \
+	+python3-light \
+	+python3-referencing
 endef
+
 
 define Package/python3-jsonschema-specifications/description
 JSON support files from the JSON Schema Specifications (metaschemas,
@@ -40,6 +54,9 @@ vocabularies, etc.), packaged for runtime access from Python as a
 referencing-based Schema Registry.
 endef
 
+
 $(eval $(call Py3Package,python3-jsonschema-specifications))
 $(eval $(call BuildPackage,python3-jsonschema-specifications))
 $(eval $(call BuildPackage,python3-jsonschema-specifications-src))
+
+$(eval $(call HostBuild))

@@ -35,7 +35,15 @@ package/boot/arm-trusted-firmware-stm32
 
 package/boot/optee-os-stm32
 
+package/boot/optee-os-ti
+
 package/boot/uboot-stm32
+
+package/boot/uboot-ti-k3
+
+package/firmware/seeed-odyssey-ap6236
+
+package/firmware/ti-linux-firmware
 
 package/system/neon-procd
 
@@ -44,3 +52,7 @@ package/system/neon-uci
 package/system/systemd
 
 target/linux/stm32 (image + patches-6.12)
+
+target/linux/ti (image + patches-6.12)
+
+package/lanh/python (attr/jsonschema/jsonschema-specifications/pathspec/referencing/rpds-py/yamllint)

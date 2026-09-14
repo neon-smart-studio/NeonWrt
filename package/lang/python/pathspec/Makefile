@@ -7,16 +7,9 @@ PKG_VERSION:=0.12.1
 PKG_RELEASE:=1
 
 PYPI_NAME:=pathspec
-PKG_HASH:=a482d51503a1ab33b1c67a6c3813a26953dbdc71c31dacaef9a838c4e29f5712
 
 PKG_LICENSE:=MPL-2.0
 PKG_LICENSE_FILES:=LICENSE
-
-HOST_BUILD_DEPENDS:= \
-	python3/host \
-	python-build/host \
-	python-installer/host \
-	python-wheel/host
 
 PKG_BUILD_DEPENDS:= \
 	python3/host \
@@ -24,30 +17,26 @@ PKG_BUILD_DEPENDS:= \
 	python-installer/host \
 	python-wheel/host
 
-include ../pypi.mk
+include $(TOPDIR)/feeds/packages/lang/python/pypi.mk
 include $(INCLUDE_DIR)/package.mk
-include $(INCLUDE_DIR)/host-build.mk
-include ../python3-package.mk
-include ../python3-host-build.mk
+include $(TOPDIR)/feeds/packages/lang/python/python3-package.mk
 
 
 define Package/python3-pathspec
   SECTION:=lang
   CATEGORY:=Languages
   SUBMENU:=Python
-  TITLE:=Path pattern matching library
+  TITLE:=Utility library for gitignore-style path patterns
   URL:=https://github.com/cpburnz/python-pathspec
-  DEPENDS:=+python3-light
+  DEPENDS:=+python3
 endef
 
 
 define Package/python3-pathspec/description
- pathspec provides gitignore-style path pattern matching.
+ pathspec provides gitignore-style path pattern matching for Python.
 endef
 
 
 $(eval $(call Py3Package,python3-pathspec))
 $(eval $(call BuildPackage,python3-pathspec))
 $(eval $(call BuildPackage,python3-pathspec-src))
-
-$(eval $(call HostBuild))
