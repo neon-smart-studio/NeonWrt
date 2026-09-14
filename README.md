@@ -37,6 +37,8 @@ package/boot/optee-os-stm32
 
 package/boot/uboot-stm32
 
+package/firmware/seeed-odyssey-ap6236
+
 package/system/neon-procd
 
 package/system/neon-uci
