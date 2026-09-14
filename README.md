@@ -51,8 +51,10 @@ package/system/neon-uci
 
 package/system/systemd
 
+package/kernel/linux/modules/netfilter.mk
+
 target/linux/stm32 (image + patches-6.12)
 
-target/linux/ti (image + patches-6.12)
+target/linux/ti (image + patches-6.12 + config-6.12)
 
 package/lanh/python (attr/jsonschema/jsonschema-specifications/pathspec/referencing/rpds-py/yamllint)

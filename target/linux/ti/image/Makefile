@@ -1,7 +1,11 @@
+TI_IMAGE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+
 include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/image.mk
 
 TI_K3_STAGE := $(STAGING_DIR_IMAGE)/ti-k3
+
+FAT32_BLOCKS := 131072
 
 
 define Build/prepare-arm64-image
@@ -10,42 +14,15 @@ endef
 
 
 define Build/ti-am62-sdcard
-	rm -rf $@.boot
-	mkdir -p $@.boot/extlinux
-
-	test -f "$(TI_K3_STAGE)/tiboot3.bin"
-	test -f "$(TI_K3_STAGE)/tispl.bin"
-	test -f "$(TI_K3_STAGE)/u-boot.img"
-
-	$(CP) "$(TI_K3_STAGE)/tiboot3.bin" \
-		$@.boot/tiboot3.bin
-
-	$(CP) "$(TI_K3_STAGE)/tispl.bin" \
-		$@.boot/tispl.bin
-
-	$(CP) "$(TI_K3_STAGE)/u-boot.img" \
-		$@.boot/u-boot.img
-
-	$(CP) "$(LINUX_DIR)/arch/arm64/boot/Image" \
-		$@.boot/Image
-
-	$(CP) "$(LINUX_DIR)/arch/arm64/boot/dts/ti/k3-am625-sk.dtb" \
-		$@.boot/k3-am625-sk.dtb
-
-	$(CP) ./extlinux.conf \
-		$@.boot/extlinux/extlinux.conf
-
-	KERNELPARTTYPE=c \
-	PADDING=1 \
-	$(TOPDIR)/scripts/gen_image_generic.sh \
+	$(TI_IMAGE_DIR)gen_ti_am62x_sdcard_img.sh \
 		$@ \
-		128 \
-		$@.boot \
-		$(CONFIG_TARGET_ROOTFS_PARTSIZE) \
 		$(IMAGE_ROOTFS) \
-		1024
-
-	rm -rf $@.boot
+		$(CONFIG_TARGET_ROOTFS_PARTSIZE) \
+		$(LINUX_DIR) \
+		$(TI_K3_STAGE) \
+		$(TI_IMAGE_DIR)extlinux.conf \
+		$(TOPDIR)/scripts/gen_image_generic.sh \
+		$(FAT32_BLOCKS)
 endef
 
 

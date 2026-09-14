@@ -40,7 +40,7 @@ include $(TOPDIR)/package/lang/python/python3-host.mk
 #
 
 TI_K3_R5_CROSS_COMPILE ?= arm-linux-gnueabihf-
-TI_K3_SOC_TYPE ?= hs-fs
+TI_K3_SOC_TYPE := $(subst ",,$(CONFIG_TI_K3_DEVICE_TYPE))
 
 R5_OUT:=$(PKG_BUILD_DIR)/out/r5
 A53_OUT:=$(PKG_BUILD_DIR)/out/a53
@@ -93,26 +93,31 @@ UBOOT_TARGETS := \
 # Default SK-AM62 production/dev boards are normally HS-FS.
 #
 
-ifeq ($(TI_K3_SOC_TYPE),gp)
+TI_K3_SOC_TYPE := hs-fs
+TI_K3_TIBOOT3  := tiboot3-am62x-hs-fs-evm.bin
+TI_K3_TISPL    := tispl.bin
+TI_K3_UBOOT    := u-boot.img
 
-  TI_K3_TIBOOT3:=tiboot3-am62x-gp-evm.bin
-  TI_K3_TISPL:=tispl.bin_unsigned
-  TI_K3_UBOOT:=u-boot.img_unsigned
-
-else ifeq ($(TI_K3_SOC_TYPE),hs-se)
-
-  TI_K3_TIBOOT3:=tiboot3-am62x-hs-evm.bin
-  TI_K3_TISPL:=tispl.bin
-  TI_K3_UBOOT:=u-boot.img
-
-else
-
-  TI_K3_TIBOOT3:=tiboot3-am62x-hs-fs-evm.bin
-  TI_K3_TISPL:=tispl.bin
-  TI_K3_UBOOT:=u-boot.img
-
+ifeq ($(CONFIG_TI_K3_DEVICE_GP),y)
+  TI_K3_SOC_TYPE := gp
+  TI_K3_TIBOOT3  := tiboot3-am62x-gp-evm.bin
+  TI_K3_TISPL    := tispl.bin_unsigned
+  TI_K3_UBOOT    := u-boot.img_unsigned
 endif
 
+ifeq ($(CONFIG_TI_K3_DEVICE_HS_FS),y)
+  TI_K3_SOC_TYPE := hs-fs
+  TI_K3_TIBOOT3  := tiboot3-am62x-hs-fs-evm.bin
+  TI_K3_TISPL    := tispl.bin
+  TI_K3_UBOOT    := u-boot.img
+endif
+
+ifeq ($(CONFIG_TI_K3_DEVICE_HS_SE),y)
+  TI_K3_SOC_TYPE := hs-se
+  TI_K3_TIBOOT3  := tiboot3-am62x-hs-evm.bin
+  TI_K3_TISPL    := tispl.bin
+  TI_K3_UBOOT    := u-boot.img
+endif
 
 #
 # Host prerequisites

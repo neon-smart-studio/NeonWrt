@@ -1,0 +1,68 @@
+diff --git a/arch/arm64/boot/dts/ti/k3-am62-lp-sk.dts b/arch/arm64/boot/dts/ti/k3-am62-lp-sk.dts
+index 8e9fc00a6b3c..32b00f4a0aa7 100644
+--- a/arch/arm64/boot/dts/ti/k3-am62-lp-sk.dts
++++ b/arch/arm64/boot/dts/ti/k3-am62-lp-sk.dts
+@@ -7,57 +7,21 @@
+ 
+ /dts-v1/;
+ 
++#include "k3-am625.dtsi"
+ #include "k3-am62x-sk-common.dtsi"
+ 
+ / {
+ 	compatible = "ti,am62-lp-sk", "ti,am625";
+ 	model = "Texas Instruments AM62x LP SK";
+ 
+-	vmain_pd: regulator-0 {
+-		/* TPS65988 PD CONTROLLER OUTPUT */
+-		compatible = "regulator-fixed";
+-		regulator-name = "vmain_pd";
+-		regulator-min-microvolt = <5000000>;
+-		regulator-max-microvolt = <5000000>;
+-		regulator-always-on;
+-		regulator-boot-on;
+-	};
+-
+-	vcc_5v0: regulator-1 {
+-		/* Output of TPS630702RNMR */
+-		compatible = "regulator-fixed";
+-		regulator-name = "vcc_5v0";
+-		regulator-min-microvolt = <5000000>;
+-		regulator-max-microvolt = <5000000>;
+-		vin-supply = <&vmain_pd>;
+-		regulator-always-on;
+-		regulator-boot-on;
+-	};
+-
+-	vcc_3v3_sys: regulator-2 {
+-		/* output of LM61460-Q1 */
+-		compatible = "regulator-fixed";
+-		regulator-name = "vcc_3v3_sys";
+-		regulator-min-microvolt = <3300000>;
+-		regulator-max-microvolt = <3300000>;
+-		vin-supply = <&vmain_pd>;
+-		regulator-always-on;
+-		regulator-boot-on;
+-	};
+-
+-	vdd_mmc1: regulator-3 {
+-		/* TPS22918DBVR */
+-		compatible = "regulator-fixed";
+-		regulator-name = "vdd_mmc1";
+-		regulator-min-microvolt = <3300000>;
+-		regulator-max-microvolt = <3300000>;
+-		regulator-boot-on;
+-		enable-active-high;
+-		vin-supply = <&vcc_3v3_sys>;
+-		gpio = <&exp1 3 GPIO_ACTIVE_HIGH>;
++	memory@80000000 {
++		bootph-pre-ram;
++		device_type = "memory";
++		/* 2G RAM */
++		reg = <0x00000000 0x80000000 0x00000000 0x80000000>;
+ 	};
+ 
+ 	vddshv_sdio: regulator-4 {
+ 		compatible = "regulator-gpio";
+ 		regulator-name = "vddshv_sdio";
+ 		pinctrl-names = "default";

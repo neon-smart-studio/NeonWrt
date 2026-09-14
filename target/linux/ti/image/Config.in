@@ -1,0 +1,26 @@
+choice
+	prompt "TI K3 device security type"
+	depends on TARGET_ti_am62x
+	default TI_K3_DEVICE_HS_FS
+
+	help
+	  Select the AM62x device security type used to build
+	  tiboot3.bin and related TI K3 boot artifacts.
+
+config TI_K3_DEVICE_GP
+	bool "GP - General Purpose"
+
+config TI_K3_DEVICE_HS_FS
+	bool "HS-FS - High Security Field Securable"
+
+config TI_K3_DEVICE_HS_SE
+	bool "HS-SE - High Security Security Enforced"
+
+endchoice
+
+config TI_K3_DEVICE_TYPE
+	string
+	depends on TARGET_ti_am62x
+	default "gp" if TI_K3_DEVICE_GP
+	default "hs-fs" if TI_K3_DEVICE_HS_FS
+	default "hs-se" if TI_K3_DEVICE_HS_SE
