@@ -12,12 +12,9 @@ while [ "$COUNT" -lt "$TIMEOUT" ]; do
 
 	if [ "$UP" = "true" ] && [ "$DEV" = "br-lan" ]; then
 		logger -t neon-network-ready "LAN ready on br-lan"
-
-		# Network-dependent services must be regenerated after netifd
-		# has resolved the real interface devices.
-		/etc/init.d/dnsmasq restart
+		
 		/etc/init.d/firewall restart
-
+		
 		exit 0
 	fi
 

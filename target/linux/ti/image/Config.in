@@ -9,6 +9,9 @@ choice
 
 config TI_K3_DEVICE_GP
 	bool "GP - General Purpose"
+	select PACKAGE_kmod-wl18xx
+	select PACKAGE_wl18xx-firmware
+	select PACKAGE_wpad-basic-mbedtls
 
 config TI_K3_DEVICE_HS_FS
 	bool "HS-FS - High Security Field Securable"

@@ -471,7 +471,7 @@ diff --git a/arch/arm64/boot/dts/ti/k3-am625-sk.dts b/arch/arm64/boot/dts/ti/k3-
 index ae81ebb39d02..6cd746602920 100644
 --- a/arch/arm64/boot/dts/ti/k3-am625-sk.dts
 +++ b/arch/arm64/boot/dts/ti/k3-am625-sk.dts
-@@ -7,8 +7,11 @@
+@@ -7,8 +7,12 @@
  
  /dts-v1/;
  
@@ -479,6 +479,7 @@ index ae81ebb39d02..6cd746602920 100644
  #include "k3-am62x-sk-common.dtsi"
  
 +#include "k3-timesync-router.h"
++#include <dt-bindings/interrupt-controller/irq.h>
 +
  / {
  	compatible = "ti,am625-sk", "ti,am625";
@@ -545,7 +546,7 @@ index ae81ebb39d02..6cd746602920 100644
  	vdd_sd_dv: regulator-4 {
  		/* Output of TLV71033 */
  		bootph-all;
-@@ -108,1 +64,17 @@
+@@ -108,1 +64,64 @@
 +&vmain_pd {
 +	bootph-all;
 +};
@@ -562,7 +563,54 @@ index ae81ebb39d02..6cd746602920 100644
 +	bootph-all;
 +};
 +
++/ {
++	wlan_lten: regulator-30 {
++		compatible = "regulator-fixed";
++		regulator-name = "wlan_lten";
++		regulator-min-microvolt = <3300000>;
++		regulator-max-microvolt = <3300000>;
++		regulator-always-on;
++		vin-supply = <&vcc_3v3_sys>;
++		gpios = <&exp1 11 GPIO_ACTIVE_LOW>;
++	};
++
++	wlan_en: regulator-31 {
++		compatible = "regulator-fixed";
++		regulator-name = "wlan_en";
++		regulator-min-microvolt = <1800000>;
++		regulator-max-microvolt = <1800000>;
++		vin-supply = <&wlan_lten>;
++		enable-active-high;
++		gpios = <&main_gpio0 71 GPIO_ACTIVE_HIGH>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&wlan_en_pins_default>;
++	};
++};
++
  &main_pmx0 {
++	wlan_en_pins_default: wlan-en-pins-default {
++		pinctrl-single,pins = <
++			AM62X_IOPAD(0x124, PIN_OUTPUT, 7) /* (A23) MMC2_SDCD.GPIO0_71 */
++		>;
++	};
++
++	main_mmc2_pins_default: main-mmc2-pins-default {
++		pinctrl-single,pins = <
++			AM62X_IOPAD(0x120, PIN_INPUT, 0) /* (C24) MMC2_CMD */
++			AM62X_IOPAD(0x118, PIN_INPUT, 0) /* (D25) MMC2_CLK */
++			AM62X_IOPAD(0x114, PIN_INPUT, 0) /* (B24) MMC2_DAT0 */
++			AM62X_IOPAD(0x110, PIN_INPUT, 0) /* (C25) MMC2_DAT1 */
++			AM62X_IOPAD(0x10c, PIN_INPUT, 0) /* (E23) MMC2_DAT2 */
++			AM62X_IOPAD(0x108, PIN_INPUT, 0) /* (D24) MMC2_DAT3 */
++			AM62X_IOPAD(0x11c, PIN_INPUT, 0) /* MMC2_CLKB */
++		>;
++	};
++
++	main_wlirq_pins_default: main-wlirq-pins-default {
++		pinctrl-single,pins = <
++			AM62X_IOPAD(0x128, PIN_INPUT, 7) /* (B23) MMC2_SDWP.GPIO0_72 */
++		>;
++	};
 @@ -140,23 +112,6 @@ AM62X_IOPAD(0x164, PIN_OUTPUT, 0) /* (AA19) RGMII2_TX_CTL */
  		>;
  	};
@@ -627,7 +675,7 @@ index ae81ebb39d02..6cd746602920 100644
  
  		partitions {
  			bootph-all;
-@@ -321,3 +270,10 @@ partition@3fc0000 {
+@@ -321,3 +270,40 @@ partition@3fc0000 {
  &tlv320aic3106 {
  	DVDD-supply = <&vcc_1v8>;
  };
@@ -637,6 +685,36 @@ index ae81ebb39d02..6cd746602920 100644
 +		K3_TS_OFFSET(12, 0x0001ffff, 17)
 +		>;
 +	status = "okay";
++};
++
++/* WL18MODGI on the AM625-SK M.2 SDIO interface. */
++&sdhci2 {
++	status = "okay";
++	bootph-all;
++	vmmc-supply = <&wlan_en>;
++	pinctrl-names = "default";
++	pinctrl-0 = <&main_mmc2_pins_default>;
++	bus-width = <4>;
++	non-removable;
++	ti,fails-without-test-cd;
++	cap-power-off-card;
++	keep-power-in-suspend;
++	ti,driver-strength-ohm = <50>;
++
++   assigned-clocks = <&k3_clks 157 158>;
++   assigned-clock-parents = <&k3_clks 157 160>;
++
++	#address-cells = <1>;
++	#size-cells = <0>;
++
++	wlcore: wlcore@2 {
++		compatible = "ti,wl1807";
++		reg = <2>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&main_wlirq_pins_default>;
++		interrupt-parent = <&main_gpio0>;
++		interrupts = <72 IRQ_TYPE_EDGE_FALLING>;
++	};
 +};
 diff --git a/arch/arm64/boot/dts/ti/k3-am625.dtsi b/arch/arm64/boot/dts/ti/k3-am625.dtsi
 index c3d1db47dc9f..c249883a8a8d 100644
