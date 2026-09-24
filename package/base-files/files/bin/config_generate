@@ -6,7 +6,6 @@ CFG=/etc/board.json
 . /lib/functions/ipv4.sh
 
 [ -s $CFG ] || /bin/board_detect || exit 1
-[ -s /etc/config/network -a -s /etc/config/system ] && exit 0
 
 generate_bridge() {
 	local name=$1
@@ -92,8 +91,10 @@ generate_static_network() {
 
 addr_offset=2
 generate_network() {
-	local ports device macaddr protocol type ipaddr netmask vlan
+	local ports device macaddr metric protocol type ipaddr netmask vlan
 	local bridge=$2
+	local existing_proto existing_ipaddr existing_netmask existing_ip6assign
+	local existing_metric bridge_mac
 
 	json_select network
 		json_select "$1"
@@ -102,80 +103,67 @@ generate_network() {
 		json_select ..
 	json_select ..
 
-	[ -n "$device" -o -n "$ports" ] || return
+	# /etc/config/network is the policy/template layer.
+	# board.json supplies board-specific hardware topology.
+	existing_proto="$(uci -q get network.$1.proto)"
+	existing_ipaddr="$(uci -q get network.$1.ipaddr)"
+	existing_netmask="$(uci -q get network.$1.netmask)"
+	existing_ip6assign="$(uci -q get network.$1.ip6assign)"
+	existing_metric="$(uci -q get network.$1.metric)"
 
-	# Force bridge for "lan" as it may have other devices (e.g. wireless)
-	# bridged
-	[ "$1" = "lan" -a -z "$ports" ] && {
-		ports="$device"
-	}
+	[ -n "$existing_proto" ] && protocol="$existing_proto"
+	[ -n "$existing_metric" ] && metric="$existing_metric"
 
-	[ -n "$ports" -a -z "$bridge" ] && {
-		local bridge_mac=""
+	[ -n "$device" -o -n "$ports" -o -n "$existing_proto" ] || return
 
-		#
-		# NeonWrt:
-		# Give br-lan its own stable locally-administered MAC instead
-		# of inheriting wlan0's MAC.
-		#
-		if [ "$1" = "lan" ]; then
-			for port in $ports; do
-				[ -r "/sys/class/net/$port/address" ] || continue
+	# LAN is always represented by br-lan when a physical LAN device exists.
+	[ "$1" = "lan" -a -z "$ports" -a -n "$device" ] && ports="$device"
 
-				port_mac="$(cat "/sys/class/net/$port/address" 2>/dev/null)"
-
-				case "$port_mac" in
-					??:??:??:??:??:??)
-						first="${port_mac%%:*}"
-						rest="${port_mac#*:}"
-
-						#
-						# Toggle bit 2 while keeping:
-						# bit0 = 0 (unicast)
-						# bit1 = 1 (locally administered)
-						#
-						first_dec=$((0x$first))
-						first_dec=$(( (first_dec & 252) | 2 ))
-						first_dec=$(( first_dec ^ 4 ))
-
-						bridge_mac="$(printf '%02x:%s' \
-							"$first_dec" "$rest")"
-						break
-					;;
-				esac
-			done
+	if [ "$1" = "lan" -a -z "$bridge" ]; then
+		# Keep a previously generated br-lan MAC; otherwise generate it once.
+		bridge_mac="$(uci -q get network.br_lan.macaddr)"
+		if [ -z "$bridge_mac" ]; then
+			set -- $(od -An -N6 -tx1 /dev/urandom 2>/dev/null)
+			if [ "$#" -eq 6 ]; then
+				first_dec=$((0x$1))
+				first_dec=$(( (first_dec & 252) | 2 ))
+				bridge_mac="$(printf '%02x:%s:%s:%s:%s:%s' \
+					"$first_dec" "$2" "$3" "$4" "$5" "$6")"
+			fi
 		fi
 
 		uci -q batch <<-EOF
-			add network device
-			set network.@device[-1].name='br-$1'
-			set network.@device[-1].type='bridge'
+			set network.br_lan='device'
+			set network.br_lan.name='br-lan'
+			set network.br_lan.type='bridge'
+			delete network.br_lan.ports
 		EOF
 
-		#
-		# Apply independent MAC to br-lan
-		#
-		[ -n "$bridge_mac" ] && \
-			uci set network.@device[-1].macaddr="$bridge_mac"
+		[ -n "$bridge_mac" ] && uci set network.br_lan.macaddr="$bridge_mac"
 
+		# Physical ports keep their hardware/driver MAC addresses.
 		for port in $ports; do
-			uci add_list network.@device[-1].ports="$port"
+			uci add_list network.br_lan.ports="$port"
 		done
 
-		[ -n "$macaddr" ] && {
-			for port in $ports; do
-				uci -q batch <<-EOF
-					add network device
-					set network.@device[-1].name='$port'
-					set network.@device[-1].macaddr='$macaddr'
-				EOF
-			done
-		}
-
-		device=br-$1
-		type=
+		device="br-lan"
+		type=""
 		macaddr=""
-	}
+	elif [ -n "$ports" -a -z "$bridge" ]; then
+		uci -q batch <<-EOF
+			set network.br_$1='device'
+			set network.br_$1.name='br-$1'
+			set network.br_$1.type='bridge'
+			delete network.br_$1.ports
+		EOF
+
+		for port in $ports; do
+			uci add_list network.br_$1.ports="$port"
+		done
+
+		device="br-$1"
+		type=""
+	fi
 
 	[ -n "$bridge" ] && {
 		[ -z "$ports" ] && ports="$device"
@@ -188,55 +176,53 @@ generate_network() {
 		type=""
 	}
 
-	if [ -n "$macaddr" ]; then
-		uci -q batch <<-EOF
-			add network device
-			set network.@device[-1].name='$device'
-			set network.@device[-1].macaddr='$macaddr'
-		EOF
-	fi
-
+	# Merge topology into the existing template; do not delete network.$1.
 	uci -q batch <<-EOF
-		delete network.$1
 		set network.$1='interface'
-		set network.$1.type='$type'
-		set network.$1.device='$device'
-		set network.$1.metric='$metric'
-		set network.$1.proto='none'
 	EOF
+
+	[ -n "$device" ] && uci set network.$1.device="$device"
+	[ -n "$metric" ] && uci set network.$1.metric="$metric"
+
+	# Remove legacy bridge/ifname settings. Wi-Fi membership belongs to
+	# /etc/config/wireless + netifd, never a hard-coded wlan0 here.
+	uci -q delete network.$1.ifname
+	uci -q delete network.$1.type
 
 	case "$protocol" in
 		static)
-			local ipad netm prefix
+			local ipad netm prefix netm_num
+
 			case "$1" in
-				lan) ipad=${ipaddr:-"192.168.1.1"} ;;
-				*) ipad=${ipaddr:-"192.168.$((addr_offset++)).1"} ;;
+				lan)
+					ipad="${existing_ipaddr:-${ipaddr:-192.168.11.1}}"
+					netm="${existing_netmask:-${netmask:-255.255.255.0}}"
+				;;
+				*)
+					ipad="${existing_ipaddr:-${ipaddr:-192.168.$((addr_offset++)).1}}"
+					netm="${existing_netmask:-${netmask:-255.255.255.0}}"
+				;;
 			esac
 
-			netm=${netmask:-"255.255.255.0"}
-			str2ip netm "$netm"
-			netmask2prefix prefix "$netm"
+			str2ip netm_num "$netm"
+			netmask2prefix prefix "$netm_num"
 
 			uci -q batch <<-EOF
 				set network.$1.proto='static'
+				delete network.$1.ipaddr
 				add_list network.$1.ipaddr='$ipad/$prefix'
+				delete network.$1.netmask
 			EOF
-			[ -e /proc/sys/net/ipv6 ] && uci set network.$1.ip6assign='60'
+
+			if [ -n "$existing_ip6assign" ]; then
+				uci set network.$1.ip6assign="$existing_ip6assign"
+			elif [ -e /proc/sys/net/ipv6 ]; then
+				uci set network.$1.ip6assign='60'
+			fi
 		;;
 
 		dhcp)
-			# fixup IPv6 slave interface if parent is a bridge
-			[ "$type" = "bridge" ] && device="br-$1"
-
 			uci set network.$1.proto='dhcp'
-			[ -e /proc/sys/net/ipv6 ] && {
-				uci -q batch <<-EOF
-					delete network.${1}6
-					set network.${1}6='interface'
-					set network.${1}6.device='$device'
-					set network.${1}6.proto='dhcpv6'
-				EOF
-			}
 		;;
 
 		pppoe)
@@ -245,26 +231,60 @@ generate_network() {
 				set network.$1.username='username'
 				set network.$1.password='password'
 			EOF
-			[ -e /proc/sys/net/ipv6 ] && {
-				uci -q batch <<-EOF
-					set network.$1.ipv6='1'
-					delete network.${1}6
-					set network.${1}6='interface'
-					set network.${1}6.device='@${1}'
-					set network.${1}6.proto='dhcpv6'
-				EOF
-			}
 		;;
 
-		ncm|\
-		qmi|\
-		mbim)
+		ncm|qmi|mbim)
 			uci -q batch <<-EOF
 				set network.$1.proto='${protocol}'
 				set network.$1.pdptype='ipv4'
 			EOF
 		;;
+
+		"")
+			;;
+		*)
+			uci set network.$1.proto="$protocol"
+		;;
 	esac
+}
+
+
+#
+# Guarantee that the logical LAN always has a bridge device.
+# This is intentionally independent of board.json network keys:
+# /etc/config/network may be supplied by the netifd package as a template.
+#
+ensure_lan_bridge() {
+	uci -q get network.lan >/dev/null || return 0
+
+	local bridge_mac first_dec
+
+	bridge_mac="$(uci -q get network.br_lan.macaddr)"
+
+	if [ -z "$bridge_mac" ]; then
+		set -- $(od -An -N6 -tx1 /dev/urandom 2>/dev/null)
+
+		if [ "$#" -eq 6 ]; then
+			first_dec=$((0x$1))
+			# Unicast + locally administered.
+			first_dec=$(( (first_dec & 252) | 2 ))
+
+			bridge_mac="$(printf '%02x:%s:%s:%s:%s:%s' \
+				"$first_dec" "$2" "$3" "$4" "$5" "$6")"
+		fi
+	fi
+
+	uci -q batch <<-EOF
+		set network.br_lan='device'
+		set network.br_lan.name='br-lan'
+		set network.br_lan.type='bridge'
+		set network.lan.device='br-lan'
+		delete network.lan.ifname
+		delete network.lan.type
+	EOF
+
+	[ -n "$bridge_mac" ] && \
+		uci set network.br_lan.macaddr="$bridge_mac"
 }
 
 generate_switch_vlans_ports() {
@@ -559,27 +579,30 @@ json_load "$(cat ${CFG})"
 
 umask 077
 
+# /etc/config/network may already exist as a policy/template.
+# Only create a baseline when it is absent, then always merge board.json.
 if [ ! -s /etc/config/network ]; then
-	bridge_name=""
 	touch /etc/config/network
 	generate_static_network
-
-	json_get_vars bridge
-	[ -n "$bridge" ] && {
-		json_select bridge
-		json_get_vars name macaddr
-		generate_bridge "$name" "$macaddr"
-		json_select ..
-		bridge_name=$name
-	}
-
-	json_get_keys keys network
-	for key in $keys; do generate_network $key $bridge_name; done
-
-	json_get_keys keys switch
-	for key in $keys; do generate_switch $key; done
 fi
 
+bridge_name=""
+json_get_vars bridge
+[ -n "$bridge" ] && {
+	json_select bridge
+	json_get_vars name macaddr
+	generate_bridge "$name" "$macaddr"
+	json_select ..
+	bridge_name=$name
+}
+
+json_get_keys keys network
+for key in $keys; do generate_network "$key" "$bridge_name"; done
+
+json_get_keys keys switch
+for key in $keys; do generate_switch "$key"; done
+
+# System configuration keeps the original generate-only-if-absent behavior.
 if [ ! -s /etc/config/system ]; then
 	touch /etc/config/system
 	generate_static_system
@@ -593,4 +616,12 @@ if [ ! -s /etc/config/system ]; then
 	json_get_keys keys led
 	for key in $keys; do generate_led $key; done
 fi
+
+
+#
+# The packaged network template may define LAN even when board.json has no
+# network.lan entry. Always bind LAN to br-lan before committing.
+#
+ensure_lan_bridge
+
 uci commit
