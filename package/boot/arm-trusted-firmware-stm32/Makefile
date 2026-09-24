@@ -35,30 +35,42 @@ endef
 define Trusted-Firmware-A/stm32mp135f-dk
   $(call Trusted-Firmware-A/stm32mp1)
   NAME:=STM32MP135F-DK
-  DTB_FILE_NAME=stm32mp135f-dk.dtb
+  DTB_FILE_NAME:=stm32mp135f-dk.dtb
+  TFA_BOARD_NAME:=stm32mp135f-dk
 endef
 
 define Trusted-Firmware-A/stm32mp157c-dk2
   $(call Trusted-Firmware-A/stm32mp1)
   NAME:=STM32MP157C-DK2
-  DTB_FILE_NAME=stm32mp157c-dk2.dtb
+  DTB_FILE_NAME:=stm32mp157c-dk2.dtb
+  TFA_BOARD_NAME:=stm32mp157c-dk2
 endef
 
 define Trusted-Firmware-A/stm32mp157c-dk2-scmi
   $(call Trusted-Firmware-A/stm32mp157c-dk2)
   NAME:=STM32MP157C-DK2 (SCMI)
+  TFA_BOARD_NAME:=stm32mp157c-dk2
 endef
 
 define Trusted-Firmware-A/stm32mp157c-odyssey
   $(call Trusted-Firmware-A/stm32mp1)
   NAME:=Seeed Odyssey STM32MP157C
-  DTB_FILE_NAME=stm32mp157c-odyssey.dtb
+  DTB_FILE_NAME:=stm32mp157c-odyssey.dtb
+  TFA_BOARD_NAME:=stm32mp157c-odyssey
+endef
+
+define Trusted-Firmware-A/stm32mp157d-dk1
+  $(call Trusted-Firmware-A/stm32mp1)
+  NAME:=STM32MP157D-DK1
+  DTB_FILE_NAME:=stm32mp157a-dk1.dtb
+  TFA_BOARD_NAME:=stm32mp157a-dk1
 endef
 
 TFA_TARGETS := stm32mp135f-dk \
 	       stm32mp157c-dk2 \
 	       stm32mp157c-dk2-scmi \
-	       stm32mp157c-odyssey
+	       stm32mp157c-odyssey \
+	       stm32mp157d-dk1
 
 TFA_MAKE_FLAGS += \
 		ARCH=aarch32 AARCH32_SP=optee \
@@ -74,7 +86,7 @@ TFA_MAKE_FLAGS += \
 
 define Package/trusted-firmware-a/install
 	$(INSTALL_DIR) $(STAGING_DIR_IMAGE)
-	$(CP) $(PKG_BUILD_DIR)/build/$(PLAT)/release/tf-a-$(subst -scmi,,$(BUILD_VARIANT)).stm32 \
+	$(CP) $(PKG_BUILD_DIR)/build/$(PLAT)/release/tf-a-$(TFA_BOARD_NAME).stm32 \
 		$(STAGING_DIR_IMAGE)/tf-a-$(BUILD_VARIANT).stm32
 	$(CP) $(PKG_BUILD_DIR)/build/$(PLAT)/release/fip.bin \
 		$(STAGING_DIR_IMAGE)/fip-$(BUILD_VARIANT).bin

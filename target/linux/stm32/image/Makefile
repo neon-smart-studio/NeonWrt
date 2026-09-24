@@ -102,9 +102,17 @@ define Device/stm32mp157c-odyssey
 		       seeed,npi-stm32mp1
 endef
 
+define Device/stm32mp157d-dk1
+  DEVICE_MODEL := STM32MP157D-DK1
+  DEVICE_DTS := stm32mp157a-dk1
+  SUPPORTED_DEVICES := st,stm32mp157a-dk1 \
+		       st,stm32mp157d-dk1
+endef
+
 TARGET_DEVICES += stm32mp135f-dk \
 		  stm32mp157c-dk2 \
 		  stm32mp157c-dk2-scmi \
-		  stm32mp157c-odyssey
+		  stm32mp157c-odyssey \
+		  stm32mp157d-dk1
 
 $(eval $(call BuildImage))
