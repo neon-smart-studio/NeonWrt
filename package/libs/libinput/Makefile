@@ -41,6 +41,7 @@ MESON_ARGS += \
 	-Dlibwacom=true \
 	-Ddebug-gui=false \
 	-Dtests=false \
+	-Ddocumentation=false \
 	-Dzshcompletiondir=no
 
 define Build/InstallDev

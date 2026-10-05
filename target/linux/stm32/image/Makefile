@@ -93,13 +93,16 @@ define Device/stm32mp157c-odyssey
   DEVICE_VENDOR := Seeed Studio
   DEVICE_MODEL := Odyssey STM32MP157C
   DEVICE_DTS := stm32mp157c-odyssey
+
   DEVICE_PACKAGES += \
 	-murata-firmware-43430-sdio \
 	-murata-nvram-43430-sdio \
 	seeed-odyssey-ap6236 \
-        kmod-phy-micrel
-  SUPPORTED_DEVICES := seeed,stm32mp157c-odyssey \
-		       seeed,npi-stm32mp1
+	kmod-phy-micrel
+
+  SUPPORTED_DEVICES := \
+	seeed,stm32mp157c-odyssey \
+	seeed,npi-stm32mp1
 endef
 
 define Device/stm32mp157d-dk1

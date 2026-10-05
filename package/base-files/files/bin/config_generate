@@ -89,6 +89,22 @@ generate_static_network() {
 	fi
 }
 
+generate_random_local_mac() {
+	local uuid mac
+
+	uuid="$(cat /proc/sys/kernel/random/uuid 2>/dev/null)" || return 1
+	[ -n "$uuid" ] || return 1
+
+	# UUID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+	# Use five random octets and force the first octet to 02:
+	# unicast + locally administered.
+	mac="$(printf '%s\n' "$uuid" | \
+		sed -n 's/^..\(..\)\(..\)\(..\)-\(..\)\(..\)-.*$/02:\1:\2:\3:\4:\5/p')"
+
+	[ -n "$mac" ] || return 1
+	printf '%s\n' "$mac"
+}
+
 addr_offset=2
 generate_network() {
 	local ports device macaddr metric protocol type ipaddr netmask vlan
@@ -123,13 +139,10 @@ generate_network() {
 		# Keep a previously generated br-lan MAC; otherwise generate it once.
 		bridge_mac="$(uci -q get network.br_lan.macaddr)"
 		if [ -z "$bridge_mac" ]; then
-			set -- $(od -An -N6 -tx1 /dev/urandom 2>/dev/null)
-			if [ "$#" -eq 6 ]; then
-				first_dec=$((0x$1))
-				first_dec=$(( (first_dec & 252) | 2 ))
-				bridge_mac="$(printf '%02x:%s:%s:%s:%s:%s' \
-					"$first_dec" "$2" "$3" "$4" "$5" "$6")"
-			fi
+			bridge_mac="$(generate_random_local_mac)" || {
+				echo "config_generate: failed to generate br-lan MAC" >&2
+				return 1
+			}
 		fi
 
 		uci -q batch <<-EOF
@@ -257,34 +270,27 @@ generate_network() {
 ensure_lan_bridge() {
 	uci -q get network.lan >/dev/null || return 0
 
-	local bridge_mac first_dec
+	local bridge_mac
 
+	# Preserve an already generated bridge MAC across subsequent runs.
 	bridge_mac="$(uci -q get network.br_lan.macaddr)"
 
 	if [ -z "$bridge_mac" ]; then
-		set -- $(od -An -N6 -tx1 /dev/urandom 2>/dev/null)
-
-		if [ "$#" -eq 6 ]; then
-			first_dec=$((0x$1))
-			# Unicast + locally administered.
-			first_dec=$(( (first_dec & 252) | 2 ))
-
-			bridge_mac="$(printf '%02x:%s:%s:%s:%s:%s' \
-				"$first_dec" "$2" "$3" "$4" "$5" "$6")"
-		fi
+		bridge_mac="$(generate_random_local_mac)" || {
+			echo "config_generate: failed to generate br-lan MAC" >&2
+			return 1
+		}
 	fi
 
 	uci -q batch <<-EOF
 		set network.br_lan='device'
 		set network.br_lan.name='br-lan'
 		set network.br_lan.type='bridge'
+		set network.br_lan.macaddr='$bridge_mac'
 		set network.lan.device='br-lan'
 		delete network.lan.ifname
 		delete network.lan.type
 	EOF
-
-	[ -n "$bridge_mac" ] && \
-		uci set network.br_lan.macaddr="$bridge_mac"
 }
 
 generate_switch_vlans_ports() {

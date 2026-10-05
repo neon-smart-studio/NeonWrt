@@ -29,7 +29,7 @@ MESON_HOST_VARS:=
 MESON_HOST_ARGS:=
 
 MESON_BUILD_DIR:=$(PKG_BUILD_DIR)/openwrt-build
-MESON_VARS:=
+MESON_VARS:=PKG_CONFIG_SYSROOT_DIR="$(STAGING_DIR)"
 MESON_ARGS:=
 
 ifneq ($(findstring i386,$(CONFIG_ARCH)),)
@@ -137,15 +137,21 @@ define Build/Configure/Meson
 		$(MESON_ARGS) \
 		$(MESON_BUILD_DIR) \
 		$(MESON_BUILD_DIR)/.., \
+		PKG_CONFIG_SYSROOT_DIR="$(STAGING_DIR)" \
 		$(MESON_VARS))
 endef
 
 define Build/Compile/Meson
-	+$(MESON_VARS) $(NINJA) -C $(MESON_BUILD_DIR) $(1)
+	+PKG_CONFIG_SYSROOT_DIR="$(STAGING_DIR)" \
+	PKG_CONFIG_LIBDIR="$(STAGING_DIR)/usr/lib/pkgconfig:$(STAGING_DIR)/usr/share/pkgconfig" \
+	$(MESON_VARS) $(NINJA) -C $(MESON_BUILD_DIR) $(1)
 endef
 
 define Build/Install/Meson
-	+DESTDIR="$(PKG_INSTALL_DIR)" $(NINJA) -C $(MESON_BUILD_DIR) install
+	+PKG_CONFIG_SYSROOT_DIR="$(STAGING_DIR)" \
+	PKG_CONFIG_LIBDIR="$(STAGING_DIR)/usr/lib/pkgconfig:$(STAGING_DIR)/usr/share/pkgconfig" \
+	DESTDIR="$(PKG_INSTALL_DIR)" \
+	$(NINJA) -C $(MESON_BUILD_DIR) install
 endef
 
 Host/Configure=$(call Host/Configure/Meson)

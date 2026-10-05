@@ -40,8 +40,6 @@ CONFIGURE_ARGS_EMBEDDED = \
 	--enable-xkbcommon
 
 CONFIGURE_ARGS += \
-	--prefix=/usr \
-	--sysconfdir=/etc \
 	-Dc_link_args="-Wl,--disable-new-dtags -Wl,-rpath=/usr/lib" \
 	--disable-logind \
 	--disable-networkd \
@@ -74,12 +72,15 @@ CONFIGURE_ARGS += \
 	--enable-sulogin
 
 MESON_ARGS += \
+	--prefix=/usr \
+	--includedir=include \
+	--libdir=lib \
+	--sysconfdir=/etc \
 	-Dukify=disabled \
 	-Dbootloader=disabled \
 	-Dldconfig=false \
 	-Dsysvinit-path= \
 	-Dsysvrcnd-path= \
-	-Dlibdir=/usr/lib \
 	-Dutmp=true \
 	-Dlogind=false \
 	-Dnetworkd=false \
