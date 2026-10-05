@@ -1,4 +1,4 @@
-![Uploading image.png…]()
+<img width="1774" height="887" alt="image" src="https://github.com/user-attachments/assets/deabc341-cd5e-4637-8fac-1196dca40524" />
 
 NeonWrt – 基於 Systemd 的 OpenWrt 發行版
 -------------------------------------------------------------
